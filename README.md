@@ -82,9 +82,29 @@ Other optional overrides (env vars or `.env`): `NTFY_SERVER` (default
 
 Claude Code on the web runs in a sandbox with a **network egress allowlist**. If
 `ntfy.sh` (or your `NTFY_SERVER`) is not on it, notifications fail with
-`HTTP 403: Host not in allowlist` and the monitor will not be able to alert you.
-Add your ntfy host to the environment's network egress settings before going
-live — see the [Claude Code on the web docs](https://code.claude.com/docs/en/claude-code-on-the-web).
+`HTTP 403: Host not in allowlist` and the monitor cannot alert you. The allowlist
+is set **per environment in the web UI** (not in this repo), so add your ntfy host
+before going live:
+
+1. Open the environment used by the scheduled task for editing — click the
+   **cloud icon** where you start a session / configure the routine, then open the
+   environment settings dialog.
+2. Under **Network access**, select **Custom**.
+3. In the **Allowed domains** field, add one per line:
+   ```
+   ntfy.sh
+   ```
+   (or your own `NTFY_SERVER` host).
+4. Check **"Also include default list of common package managers"** so GitHub /
+   pip / npm keep working alongside ntfy.
+5. Save, then start a fresh session (the change applies to newly provisioned
+   sessions). Verify with `curl -d "test" https://ntfy.sh/<your-topic>` or a real
+   `python3 r2_monitor.py process --input fixtures/sample_results.json` run.
+
+You only need to add `ntfy.sh` — MCP connector traffic (Gmail) is routed through
+Anthropic's servers and works without being in the allowlist. See the
+[Claude Code on the web docs](https://code.claude.com/docs/en/claude-code-on-the-web#network-access).
+
 A send failure is non-destructive: the monitor will **not** disarm and will retry
 the next morning, so an allowlist mistake delays alerts but never drops the hit.
 
