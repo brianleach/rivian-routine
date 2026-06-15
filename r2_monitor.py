@@ -94,9 +94,18 @@ BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2026-07-1
 # Timezone for the backstop date comparison.
 TIMEZONE = os.environ.get("R2_TIMEZONE", "America/Chicago")
 
+# Slack is a SECOND notification channel, sent alongside ntfy. The script can't
+# reach the Slack MCP itself, so it records what to send in state/last_run.json
+# and the scheduled session (RUN.md) mirrors it to this Slack user/channel via
+# the Slack MCP. Set SLACK_USER_ID (a user id "U..." for a DM, or a channel id)
+# in .env to enable; leave empty to use ntfy only.
+SLACK_USER_ID = os.environ.get("SLACK_USER_ID", "").strip()
+
 STATE_DIR = os.path.join(TASK_DIR, "state")
 STATE_FILE = os.path.join(STATE_DIR, "state.json")
 DONE_FILE = os.path.join(STATE_DIR, "DONE")
+# Hand-off file for the Slack mirror: the new hits/maybes from THIS run.
+LAST_RUN_FILE = os.path.join(STATE_DIR, "last_run.json")
 
 
 # ----------------------------------------------------------------------------
@@ -149,6 +158,38 @@ def write_done(reason: str) -> None:
             fh,
             indent=2,
         )
+
+
+def _detail(c: dict) -> dict:
+    """The fields the Slack mirror (and a human) needs for one alert."""
+    return {
+        "subject": c.get("subject"),
+        "sender": c.get("sender"),
+        "received": c.get("received"),
+        "confidence": c.get("confidence"),
+        "reason": c.get("reason"),
+        "message_id": c.get("message_id"),
+        "gmail_url": gmail_link(c["message_id"]),
+    }
+
+
+def write_last_run(high: list, maybe: list, notice: str | None = None) -> None:
+    """Record THIS run's new alerts so the scheduled session can mirror them to
+    Slack via the Slack MCP (the script can't reach the MCP itself). Overwritten
+    every real run, so a stale file never causes a duplicate Slack ping.
+    """
+    os.makedirs(STATE_DIR, exist_ok=True)
+    payload = {
+        "generated_at": datetime.now().astimezone().isoformat(),
+        "slack_user_id": SLACK_USER_ID or None,
+        "high": high,
+        "maybe": maybe,
+        "notice": notice,
+    }
+    tmp = LAST_RUN_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    os.replace(tmp, LAST_RUN_FILE)
 
 
 def send_ntfy(title: str, body: str, priority: str, tags: str,
@@ -319,6 +360,19 @@ def _read_input(path: str | None) -> list:
     return data
 
 
+def _print_slack_hint(high: list, maybe: list, notice: str | None,
+                      dry_run: bool = False) -> None:
+    """Tell the operator (and the scheduled session) whether a Slack mirror is
+    pending. The session reads state/last_run.json and sends via the Slack MCP."""
+    if not (high or maybe or notice):
+        return
+    n = len(high) + len(maybe) + (1 if notice else 0)
+    where = "would record" if dry_run else "recorded"
+    target = SLACK_USER_ID or "(SLACK_USER_ID unset — Slack mirror disabled)"
+    print(f"  [slack] {where} {n} alert(s) in state/last_run.json for Slack "
+          f"mirror -> {target}")
+
+
 def cmd_process(input_path: str | None, dry_run: bool) -> int:
     # 1) Sentinel gate — near-zero work if already disarmed (skipped in dry-run so
     #    the pipeline can always be tested).
@@ -329,21 +383,30 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
     # 2) Hard backstop — fire once if the window has fully elapsed.
     if today_local() > BACKSTOP_DATE:
         print(f"Backstop: today is past {BACKSTOP_DATE.isoformat()} with no hit.")
+        notice = ("R2 monitor: window elapsed — R2 invite never detected, "
+                  "disabling check. Run --reset to re-arm.")
         if notify_backstop(dry_run):
             if not dry_run:
                 write_done("backstop: window elapsed")
+                write_last_run([], [], notice=notice)
+                _print_slack_hint([], [], notice)
                 print("Backstop notice sent; monitor disarmed.")
             else:
                 print("  [dry-run] would write DONE sentinel (backstop).")
+                _print_slack_hint([], [], notice, dry_run=True)
         return 0
 
     candidates = _read_input(input_path)
     if not candidates:
         print("No candidates to classify. Nothing to do (silent).")
+        if not dry_run:
+            write_last_run([], [])  # clear any stale hand-off
         return 0
 
     state = load_state()
     did_high = False
+    new_high: list = []   # new HIGH alerts this run (for the Slack mirror)
+    new_maybe: list = []  # new MAYBE alerts this run
 
     for c in candidates:
         mid = c.get("message_id")
@@ -358,6 +421,9 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
                 print(f"  [dup ] {label} — already notified, skipping.")
                 continue
             print(f"  [HIT ] {label}")
+            # Record for the Slack mirror regardless of the ntfy outcome, so a
+            # blocked ntfy (e.g. egress 403) still reaches you on Slack.
+            new_high.append(_detail(c))
             if notify_high(c, dry_run):
                 did_high = True
                 if not dry_run:
@@ -382,6 +448,7 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
                 print(f"  [dup ] {label} — already flagged as maybe, skipping.")
                 continue
             print(f"  [MAYBE] {label}")
+            new_maybe.append(_detail(c))
             if notify_maybe(c, dry_run):
                 if not dry_run:
                     state["maybe"][mid] = {
@@ -396,6 +463,10 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
 
     if not dry_run:
         save_state(state)
+        write_last_run(new_high, new_maybe)
+        _print_slack_hint(new_high, new_maybe, None)
+    else:
+        _print_slack_hint(new_high, new_maybe, None, dry_run=True)
 
     # 3) Self-terminate on a confirmed, successfully-notified high-confidence hit.
     if did_high:

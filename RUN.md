@@ -63,12 +63,31 @@ Build a JSON array, one object per de-duped candidate, each object EXACTLY:
 ```
 Write the array to `results.json` in the task dir.
 
-**Step 3 — hand off to the plumbing.**
+**Step 3 — hand off to the plumbing (ntfy + state).**
 - Normal run: `python3 r2_monitor.py process --input results.json`
 - DRY-RUN:    `python3 r2_monitor.py process --input results.json --dry-run`
 
-Then report the script's output verbatim (it lists each candidate's tier and
-whether it notified / disarmed). Do not send any notification yourself — the
-script owns notifications, de-dup, the DONE sentinel, and the backstop.
+The script owns **ntfy** notifications, de-dup, the DONE sentinel, and the
+backstop. Do not send ntfy yourself.
+
+**Step 4 — mirror new alerts to Slack (the second channel).** The script can't
+reach the Slack MCP, so it writes this run's NEW alerts to `state/last_run.json`
+for you to send. After Step 3:
+- Read `state/last_run.json`. If it's missing or both `high` and `maybe` are
+  empty and `notice` is null, send nothing.
+- If `slack_user_id` is null, Slack is disabled — skip (ntfy only).
+- Otherwise use the Slack MCP `slack_send_message` with `channel_id` =
+  `slack_user_id` (a `U...` id DMs that user). Send ONE message per alert:
+  - For each entry in `high`: a clear "🚗 R2 ORDER INVITE detected" message with
+    the subject, sender, received time, the one-line reason, and the `gmail_url`.
+  - For each entry in `maybe`: a "🔍 POSSIBLE R2 invite — check manually" message
+    with the same fields.
+  - If `notice` is set (backstop): send it as-is.
+- On a **DRY-RUN**, do NOT send to Slack — `last_run.json` is not written in
+  dry-run; just state that Slack would have mirrored the alerts shown above.
+
+These are already de-duped (only NEW alerts appear in `last_run.json`), so you
+won't re-ping the same email on later runs. Then report the script's output
+verbatim plus which Slack messages you sent.
 
 ---

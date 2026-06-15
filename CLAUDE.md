@@ -20,8 +20,22 @@ full description and `RUN.md` for the scheduled-session prompt.
   deterministic and irreversible: the `DONE` sentinel gate, de-dup state, ntfy
   notifications, the hard backstop, `--reset`, and `--dry-run`.
 
-Keep this split. The LLM should not send notifications or touch state directly;
-the script should not make the invite-vs-marketing judgement.
+Keep this split. The LLM should not make the invite-vs-marketing judgement's
+counterpart — touching ntfy/state/sentinel — and the script should not make the
+classification judgement.
+
+## Two notification channels: ntfy + Slack
+
+- **ntfy** is owned by `r2_monitor.py` (plain HTTPS POST). Primary channel; its
+  send success is what gates de-dup state and self-termination.
+- **Slack** is the second channel. The script can't reach the Slack MCP, so on
+  each real run it writes the run's NEW alerts to `state/last_run.json`
+  (`high`, `maybe`, `notice`, `slack_user_id`), and the scheduled session
+  (`RUN.md`, Step 4) mirrors them via the Slack MCP. Slack rides along; it does
+  not gate disarm. `last_run.json` only ever lists NEW alerts, so Slack inherits
+  the same de-dup. Slack is recorded even when ntfy fails, so a blocked ntfy
+  (egress 403) still reaches you on Slack. `--dry-run` writes nothing.
+- Config (`.env`, git-ignored): `NTFY_TOPIC`, `SLACK_USER_ID` (empty = ntfy only).
 
 ## Invariants — do not break these
 

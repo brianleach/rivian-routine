@@ -47,6 +47,10 @@ code — and letting the LLM do only the judgement call — is deliberate.
      "POSSIBLE R2 invite — check manually." Keeps you in the loop without false
      alarms. Does **not** disarm — monitoring continues.
    - **No hit** → silent.
+   - **Two channels.** Alerts go to **ntfy and Slack**. The script owns ntfy and
+     records each run's new alerts to `state/last_run.json`; the scheduled
+     session mirrors them to Slack via the Slack MCP (Slack needs no egress
+     allowlist). Slack is optional — unset `SLACK_USER_ID` to use ntfy only.
 5. **De-duplication.** Notified message IDs are persisted in `state/state.json`,
    tracking high-confidence and maybe notifications **separately** so a maybe can
    be *upgraded* to a real hit if a later run reclassifies it ≥ 0.7.
@@ -101,12 +105,26 @@ before going live:
    sessions). Verify with `curl -d "test" https://ntfy.sh/<your-topic>` or a real
    `python3 r2_monitor.py process --input fixtures/sample_results.json` run.
 
-You only need to add `ntfy.sh` — MCP connector traffic (Gmail) is routed through
-Anthropic's servers and works without being in the allowlist. See the
+You only need to add `ntfy.sh` — MCP connector traffic (Gmail, Slack) is routed
+through Anthropic's servers and works without being in the allowlist. See the
 [Claude Code on the web docs](https://code.claude.com/docs/en/claude-code-on-the-web#network-access).
 
 A send failure is non-destructive: the monitor will **not** disarm and will retry
 the next morning, so an allowlist mistake delays alerts but never drops the hit.
+
+### 1c. Slack as a second channel (optional)
+
+Alerts are delivered to **both ntfy and Slack**. Slack is sent by the scheduled
+session through the Slack MCP, so it needs no egress allowlist change — handy as a
+backstop while you sort out ntfy. To enable, set your Slack target in `.env`:
+
+```bash
+echo 'SLACK_USER_ID=U0XXXXXXX' >> .env   # your user id (DM) or a channel id (C...)
+```
+
+The Slack MCP connector must be enabled on the session/routine. Leave
+`SLACK_USER_ID` empty to use ntfy only. (Find your user id in Slack: profile →
+*More* → *Copy member ID*.)
 
 ### 2. Schedule it (every morning at 7:00 AM America/Chicago)
 
@@ -167,11 +185,11 @@ keep watching, or to reuse the monitor next time.
 
 ```
 r2_monitor.py                 # deterministic CLI: guard / process / reset / dry-run
-RUN.md                        # the scheduled-session prompt (Gmail search + classify)
+RUN.md                        # scheduled-session prompt (Gmail search + classify + Slack mirror)
 CLAUDE.md                     # guidance for Claude working in this repo
 fixtures/sample_results.json  # offline test fixtures
-.env.example                  # copy to .env (git-ignored) and set NTFY_TOPIC
-state/                        # runtime state + DONE sentinel (git-ignored)
+.env.example                  # copy to .env (git-ignored): NTFY_TOPIC, SLACK_USER_ID
+state/                        # runtime state: state.json, DONE, last_run.json (git-ignored)
 ```
 
 ## Privacy
