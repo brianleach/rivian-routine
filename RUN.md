@@ -1,9 +1,10 @@
 # R2 invite monitor — scheduled-session prompt
 
-This is the prompt the **scheduled Claude session** runs every morning. It is the
-"task script": Claude does the two things that need judgement (pull candidates
-from Gmail, classify them), and hands the result to `r2_monitor.py`, which does
-all the deterministic plumbing (de-dup, notify, sentinel, backstop).
+This is the prompt the **scheduled Claude session** runs on each scheduled run
+(3×/day by default). It is the "task script": Claude does the two things that need
+judgement (pull candidates from Gmail, classify them), and hands the result to
+`r2_monitor.py`, which does all the deterministic plumbing (de-dup, notify,
+sentinel, backstop).
 
 Copy everything between the lines below into the scheduled task's prompt
 (see README.md → "Schedule"). For a manual dry-run test, paste it into a normal

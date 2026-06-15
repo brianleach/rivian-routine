@@ -110,7 +110,7 @@ through Anthropic's servers and works without being in the allowlist. See the
 [Claude Code on the web docs](https://code.claude.com/docs/en/claude-code-on-the-web#network-access).
 
 A send failure is non-destructive: the monitor will **not** disarm and will retry
-the next morning, so an allowlist mistake delays alerts but never drops the hit.
+on the next run, so an allowlist mistake delays alerts but never drops the hit.
 
 ### 1c. Slack as a second channel (optional)
 
@@ -126,25 +126,35 @@ The Slack MCP connector must be enabled on the session/routine. Leave
 `SLACK_USER_ID` empty to use ntfy only. (Find your user id in Slack: profile →
 *More* → *Copy member ID*.)
 
-### 2. Schedule it (every morning at 7:00 AM America/Chicago)
+### 2. Schedule it (3×/day: 07:00, 13:00, 19:00 America/Chicago)
 
-This runs as a **scheduled task in Claude Code on the web** (it needs the Gmail
-MCP server, which lives in the Claude session):
+This runs as a **scheduled task / routine in Claude Code on the web** (it needs
+the Gmail MCP server, which lives in the Claude session):
 
-1. Open the repo in Claude Code on the web and create a **scheduled task /
-   trigger**.
-2. Schedule: **daily at 07:00, timezone America/Chicago**.
+1. Open the repo in Claude Code on the web and create a **routine / scheduled
+   task**.
+2. Schedule it to run **three times a day — 07:00, 13:00, and 19:00, timezone
+   America/Chicago** (create three run times, or one routine per time).
 3. Prompt: paste the contents of [`RUN.md`](./RUN.md) (the block between the
    `---` lines).
-4. Make sure `NTFY_TOPIC` is set in the environment (env var / setup script).
+4. Make sure `NTFY_TOPIC` (and `SLACK_USER_ID`, if using Slack) is set in the
+   environment, and the Gmail + Slack MCP connectors are enabled.
+
+Why 3×/day: an order invite isn't minute-critical, so this caps worst-case
+detection latency at ~6–8h without continuous polling. Extra runs are safe and
+cheap — de-dup means you're never pinged twice for the same email, and once a
+high-confidence hit fires, the `DONE` sentinel makes every later run exit at the
+guard (near-zero tokens). Keep the query at `newer_than:2d` so a skipped run is
+covered by the next one. Bump to 4×/day (add 22:00) or every 3h if you want
+tighter latency; drop to 1×/day to minimize cost.
 
 > Self-hosting instead? A cron entry that drives a headless Claude run works too —
 > the only hard requirement is that the Gmail MCP server is available to the
 > session. Example (conceptual):
 > ```cron
-> # min hour dom mon dow   (set CRON_TZ or use a system tz of America/Chicago)
+> # set CRON_TZ or use a system tz of America/Chicago
 > CRON_TZ=America/Chicago
-> 0 7 * * *  cd /path/to/rivian-routine && claude -p "$(cat RUN.md)"
+> 0 7,13,19 * * *  cd /path/to/rivian-routine && claude -p "$(cat RUN.md)"
 > ```
 
 ## Testing — run the dry-run BEFORE the first live execution

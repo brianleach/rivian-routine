@@ -81,7 +81,8 @@ A MAYBE can be **upgraded** to a HIGH on a later run if reclassified ≥ 0.7.
 
 ## Deployment notes
 
-- Runs as a scheduled task in Claude Code on the web: daily **07:00
-  America/Chicago**, prompt = `RUN.md`. Requires the Gmail MCP server in-session.
+- Runs as a scheduled task in Claude Code on the web: **3×/day at 07:00 / 13:00
+  / 19:00 America/Chicago**, prompt = `RUN.md`. Requires the Gmail MCP server
+  in-session. De-dup + the `DONE` sentinel make the extra runs safe and cheap.
 - **ntfy egress:** the sandbox uses a network egress allowlist; `ntfy.sh` (or
   your `NTFY_SERVER`) must be on it or sends fail with `HTTP 403`.
