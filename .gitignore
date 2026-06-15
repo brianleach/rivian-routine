@@ -1,0 +1,7 @@
+# Runtime state — never commit these (per-machine, contains notification history)
+state/
+results.json
+
+# Python bytecode
+__pycache__/
+*.pyc

@@ -1,0 +1,42 @@
+[
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.95,
+    "reason": "June 9 marketing blast hyping R2 order opening; no personal invite to configure my order.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Important update on R2 orders",
+    "received": "2026-06-09T13:02:00-05:00",
+    "message_id": "FIXTURE_marketing_june9",
+    "thread_id": "FIXTURE_thread_1"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "Third-party newsletter mentioning Rivian R2; not from Rivian, not an invite.",
+    "sender": "TLDR <dan@tldrnewsletter.com>",
+    "subject": "Rivian R2 first drive, OpenAI news, and more",
+    "received": "2026-06-12T06:30:00-05:00",
+    "message_id": "FIXTURE_tldr_newsletter",
+    "thread_id": "FIXTURE_thread_2"
+  },
+  {
+    "classification": "ACTIONABLE_INVITE",
+    "confidence": 0.55,
+    "reason": "Rivian-sent and order-related but ambiguous whether it is my personal invite or a teaser.",
+    "sender": "Rivian <orders@rivian.com>",
+    "subject": "Your R2 reservation: next steps",
+    "received": "2026-06-14T09:15:00-05:00",
+    "message_id": "FIXTURE_maybe_nextsteps",
+    "thread_id": "FIXTURE_thread_3"
+  },
+  {
+    "classification": "ACTIONABLE_INVITE",
+    "confidence": 0.93,
+    "reason": "Personalized: it's my turn to configure and place my R2 order; order window now open with a deadline.",
+    "sender": "Rivian Orders <noreply@order.rivian.com>",
+    "subject": "It's your turn — configure and place your R2 order",
+    "received": "2026-06-15T07:45:00-05:00",
+    "message_id": "FIXTURE_real_invite",
+    "thread_id": "FIXTURE_thread_4"
+  }
+]
