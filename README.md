@@ -65,13 +65,28 @@ Notifications use [ntfy](https://ntfy.sh) — install the ntfy app, subscribe to
 topic of your choosing, then point the monitor at it. Pick a long, unguessable
 topic name (ntfy topics are public to anyone who knows the name).
 
+The topic is **not** stored in the repo (so this is safe to open source). Provide
+it either as an environment variable or via a git-ignored `.env` file, which the
+script loads automatically:
+
 ```bash
-export NTFY_TOPIC="your-private-topic-name"   # e.g. r2-watch-7f3a9c
+cp .env.example .env
+echo 'NTFY_TOPIC=your-private-topic-name' > .env   # e.g. r2-watch-7f3a9c
 ```
 
-Other optional overrides (env vars): `NTFY_SERVER` (default `https://ntfy.sh`),
-`R2_BACKSTOP_DATE` (default `2026-07-15`), `R2_TIMEZONE` (default
-`America/Chicago`), `R2_HIGH_CONF` (0.7), `R2_MAYBE_LOW` (0.4).
+Other optional overrides (env vars or `.env`): `NTFY_SERVER` (default
+`https://ntfy.sh`), `R2_BACKSTOP_DATE` (default `2026-07-15`), `R2_TIMEZONE`
+(default `America/Chicago`), `R2_HIGH_CONF` (0.7), `R2_MAYBE_LOW` (0.4).
+
+### 1b. Allow outbound access to ntfy.sh ⚠️
+
+Claude Code on the web runs in a sandbox with a **network egress allowlist**. If
+`ntfy.sh` (or your `NTFY_SERVER`) is not on it, notifications fail with
+`HTTP 403: Host not in allowlist` and the monitor will not be able to alert you.
+Add your ntfy host to the environment's network egress settings before going
+live — see the [Claude Code on the web docs](https://code.claude.com/docs/en/claude-code-on-the-web).
+A send failure is non-destructive: the monitor will **not** disarm and will retry
+the next morning, so an allowlist mistake delays alerts but never drops the hit.
 
 ### 2. Schedule it (every morning at 7:00 AM America/Chicago)
 
@@ -133,14 +148,17 @@ keep watching, or to reuse the monitor next time.
 ```
 r2_monitor.py                 # deterministic CLI: guard / process / reset / dry-run
 RUN.md                        # the scheduled-session prompt (Gmail search + classify)
+CLAUDE.md                     # guidance for Claude working in this repo
 fixtures/sample_results.json  # offline test fixtures
+.env.example                  # copy to .env (git-ignored) and set NTFY_TOPIC
 state/                        # runtime state + DONE sentinel (git-ignored)
 ```
 
 ## Privacy
 
 This repo is safe to open source: it contains no inbox contents, no email
-address, and no real ntfy topic — the topic is a placeholder you supply via
-`NTFY_TOPIC`, and runtime state (`state/`, `results.json`) is git-ignored. Keep
-it that way: never commit `state/state.json` (it holds notified message IDs) or
-hard-code your ntfy topic.
+address, and no real ntfy topic — the topic is supplied at runtime via
+`NTFY_TOPIC` or a git-ignored `.env`, and runtime state (`state/`, `results.json`,
+`.env`) is git-ignored. Keep it that way: never commit `.env` or
+`state/state.json` (it holds notified message IDs), and never hard-code your ntfy
+topic.

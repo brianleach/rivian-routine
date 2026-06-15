@@ -5,3 +5,6 @@ results.json
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Local secrets (ntfy topic etc.) — never commit
+.env

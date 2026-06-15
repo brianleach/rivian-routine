@@ -46,11 +46,40 @@ import urllib.error
 from datetime import datetime, date
 
 # ----------------------------------------------------------------------------
-# Configuration (override via environment variables)
+# Configuration (override via environment variables or a git-ignored .env)
 # ----------------------------------------------------------------------------
 
+# Task dir = this script's directory. State lives in ./state/ (git-ignored).
+TASK_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_dotenv() -> None:
+    """Load KEY=VALUE lines from a git-ignored .env in the task dir.
+
+    This keeps secrets (your ntfy topic) out of the committed repo while still
+    making them available to the scheduled run. Real environment variables take
+    precedence, so .env is only a fallback.
+    """
+    path = os.path.join(TASK_DIR, ".env")
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key, val = key.strip(), val.strip().strip('"').strip("'")
+                os.environ.setdefault(key, val)
+    except OSError:
+        pass
+
+
+_load_dotenv()
+
 # ntfy topic + server. The topic is intentionally a placeholder — set NTFY_TOPIC
-# (env var) or edit the default below before going live.
+# (env var or .env) before going live; never hard-code it in a public repo.
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "REPLACE_WITH_MY_NTFY_TOPIC")
 NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
 
@@ -65,8 +94,6 @@ BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2026-07-1
 # Timezone for the backstop date comparison.
 TIMEZONE = os.environ.get("R2_TIMEZONE", "America/Chicago")
 
-# Task dir = this script's directory. State lives in ./state/ (git-ignored).
-TASK_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_DIR = os.path.join(TASK_DIR, "state")
 STATE_FILE = os.path.join(STATE_DIR, "state.json")
 DONE_FILE = os.path.join(STATE_DIR, "DONE")
