@@ -15,6 +15,9 @@ It is built for two hard parts of this specific problem:
    transactional invite may come from a different domain/ESP. So the sender is
    **never used as a hard filter** — it's explicitly untrusted as a signal.
 
+> **Just want it running?** Skip straight to [What you'll need](#what-youll-need)
+> and [Setup](#setup). This next section is the how-and-why for the curious.
+
 ## How it works
 
 The monitor is split into a thinking half and a plumbing half:
@@ -61,7 +64,42 @@ code — and letting the LLM do only the judgement call — is deliberate.
    LOW "window elapsed — disabling check" notice is sent and `DONE` is written —
    so a silently-missed invite can never leave the job running for months.
 
+## What you'll need
+
+No servers, no programming. If you can sign into a website and edit a few lines of
+text, you can run this.
+
+- A **Claude account** with **Claude Code on the web** ([claude.ai/code](https://claude.ai/code)).
+  The monitor runs there in the cloud as a scheduled "routine," so your own
+  computer doesn't need to be on.
+- A **phone** for push notifications (the free **ntfy** app), and/or **Slack** if
+  you'd prefer a direct message.
+- About **15 minutes** for a one-time setup.
+
+**New to any of this? Plain-language definitions:**
+
+- **Claude Code** — Anthropic's AI assistant for technical tasks. The web version
+  can run scheduled jobs in the cloud for you.
+- **Routine** — a scheduled task in Claude Code (think "alarm clock for a prompt")
+  that runs automatically on a timer.
+- **MCP connector** — a secure, permission-based link that lets Claude read a
+  service like your Gmail. You connect it once with a normal Google sign-in. Here
+  it is **read-only** — the monitor never sends or deletes mail.
+- **ntfy** ([ntfy.sh](https://ntfy.sh)) — a free push-notification app with no
+  account required. You choose a secret "topic" name; anything sent to that topic
+  pops up on your phone.
+
 ## Setup
+
+Do these once, in order. Steps 1–1d are one-time setup; step 2 creates the
+scheduled routine; then test it before going live.
+
+1. **[Pick an ntfy topic + install the app](#1-set-your-ntfy-topic)** — where alerts go
+2. **[Allow the cloud to reach ntfy.sh](#1b-allow-outbound-access-to-ntfysh)** — so sends aren't blocked
+3. **[(Optional) Add Slack](#1c-slack-as-a-second-channel-optional)** — a second alert channel
+4. **[Connect your Gmail to Claude](#1d-connect-gmail-to-claude-required)** — the inbox it watches
+5. **[Create the scheduled routine](#2-schedule-it-3day-0700-1300-1900-americachicago)** — put it on a timer
+6. **[Test it](#testing--run-the-dry-run-before-the-first-live-execution)** — confirm before relying on it
 
 ### 1. Set your ntfy topic
 
@@ -82,9 +120,9 @@ Other optional overrides (env vars or `.env`): `NTFY_SERVER` (default
 `https://ntfy.sh`), `R2_BACKSTOP_DATE` (default `2026-07-15`), `R2_TIMEZONE`
 (default `America/Chicago`), `R2_HIGH_CONF` (0.7), `R2_MAYBE_LOW` (0.4).
 
-### 1b. Allow outbound access to ntfy.sh ⚠️
+### 1b. Allow outbound access to ntfy.sh
 
-Claude Code on the web runs in a sandbox with a **network egress allowlist**. If
+⚠️ Claude Code on the web runs in a sandbox with a **network egress allowlist**. If
 `ntfy.sh` (or your `NTFY_SERVER`) is not on it, notifications fail with
 `HTTP 403: Host not in allowlist` and the monitor cannot alert you. The allowlist
 is set **per cloud environment in the web UI** (not in this repo, not in the
