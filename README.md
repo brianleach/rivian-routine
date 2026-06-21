@@ -240,7 +240,7 @@ topic.
 
 ## Author
 
-Built by Brian Leach in Austin, TX 🤠⭐ — [LinkedIn](https://www.linkedin.com/in/bleach/)
+Built by Brian Leach in Austin, TX — [LinkedIn](https://www.linkedin.com/in/bleach/)
 
 ## License
 
