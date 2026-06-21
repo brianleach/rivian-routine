@@ -142,6 +142,27 @@ The Slack MCP connector must be enabled on the session/routine. Leave
 `SLACK_USER_ID` empty to use ntfy only. (Find your user id in Slack: profile →
 *More* → *Copy member ID*.)
 
+### 1d. Connect Gmail to Claude (required)
+
+The monitor reads your inbox through the **Gmail MCP connector** in the Claude
+session — this is the one hard requirement. Connect it once on your account:
+
+1. Go to [claude.ai/customize/connectors](https://claude.ai/customize/connectors)
+   (or, in the Claude Code web app, **Customize → Connectors**).
+2. Find **Gmail** in the directory and click **Connect**.
+3. Complete Google's OAuth flow and grant read access to your mail. You'll be
+   asked to pick the Google account whose inbox you want watched — use the one the
+   R2 invite will land in.
+4. Back in Claude Code, confirm **Gmail** shows as connected. When you create the
+   routine in step 2, attach this connector to it (see **Connectors** below).
+
+Notes:
+- The connector is tied to **your** Claude account, so the routine reads *your*
+  Gmail — nothing is shared in this repo.
+- MCP connector traffic (Gmail, Slack) is routed through Anthropic's servers, so
+  it works **without** any egress-allowlist change (that's only for ntfy, §1b).
+- Read access is enough; the monitor never sends, deletes, or modifies mail.
+
 ### 2. Schedule it (3×/day: 07:00, 13:00, 19:00 America/Chicago)
 
 This runs as a **cloud routine** in Claude Code (it needs the Gmail MCP server,
