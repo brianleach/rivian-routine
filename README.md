@@ -226,3 +226,7 @@ address, and no real ntfy topic — the topic is supplied at runtime via
 `.env`) is git-ignored. Keep it that way: never commit `.env` or
 `state/state.json` (it holds notified message IDs), and never hard-code your ntfy
 topic.
+
+## License
+
+[MIT](LICENSE) © Brian Leach
