@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-r2_monitor.py — Rivian R2 order-invite morning monitor (deterministic plumbing).
+r2_monitor.py — Rivian R2 order-invite monitor (deterministic plumbing).
 
 This script owns everything that does NOT require judgement:
   * the DONE-sentinel gate (self-termination),
@@ -27,7 +27,7 @@ Usage
       Reads from stdin if --input is omitted.
 
   python3 r2_monitor.py reset            (alias: --reset)
-      Clear the DONE sentinel so the morning check runs again.
+      Clear the DONE sentinel so the scheduled check runs again.
 
 Exit codes from `process`:
   0  ran normally (no high-confidence hit, or dry-run)
@@ -252,7 +252,7 @@ def notify_high(c: dict, dry_run: bool) -> bool:
     body = (
         "Rivian appears to have sent your R2 order invite.\n\n"
         + _details_block(c)
-        + "\n\n✅ R2 invite detected — morning check disabled. "
+        + "\n\n✅ R2 invite detected — scheduled check disabled. "
         "Run --reset to re-arm."
     )
     return send_ntfy(
@@ -340,7 +340,7 @@ def cmd_guard() -> int:
 def cmd_reset() -> int:
     if os.path.exists(DONE_FILE):
         os.remove(DONE_FILE)
-        print("Re-armed: DONE sentinel cleared. The morning check will run again.")
+        print("Re-armed: DONE sentinel cleared. The scheduled check will run again.")
     else:
         print("Already armed: no DONE sentinel present.")
     return 0
@@ -483,7 +483,7 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Rivian R2 invite morning monitor.")
+    parser = argparse.ArgumentParser(description="Rivian R2 invite monitor.")
     parser.add_argument("--reset", action="store_true",
                         help="Clear the DONE sentinel and re-arm the monitor.")
     sub = parser.add_subparsers(dest="command")

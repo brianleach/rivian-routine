@@ -4,7 +4,7 @@ Guidance for Claude (or any agent) working in this repo.
 
 ## What this is
 
-A scheduled "morning check" that watches Gmail for the **real** Rivian R2 order
+A scheduled check (runs a few times a day) that watches Gmail for the **real** Rivian R2 order
 invite, sends a phone notification via [ntfy](https://ntfy.sh) when it arrives,
 and then **disarms itself** so it stops consuming tokens. See `README.md` for the
 full description and `RUN.md` for the scheduled-session prompt.

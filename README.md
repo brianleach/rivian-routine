@@ -1,8 +1,8 @@
 # Rivian R2 invite monitor
 
-A scheduled "morning check" that watches Gmail for the **real** Rivian R2 order
-invite, pushes a phone notification when it arrives, and then **disarms itself**
-so it stops consuming tokens once the job is done.
+A scheduled check — it runs a few times a day — that watches Gmail for the
+**real** Rivian R2 order invite, pushes a phone notification when it arrives, and
+then **disarms itself** so it stops consuming tokens once the job is done.
 
 It is built for two hard parts of this specific problem:
 
@@ -27,7 +27,7 @@ The monitor is split into a thinking half and a plumbing half:
 Keeping the irreversible/stateful work (notifying, disarming) in plain, tested
 code — and letting the LLM do only the judgement call — is deliberate.
 
-### The pipeline each morning
+### The pipeline on each run
 
 1. **Sentinel gate.** `r2_monitor.py guard` runs first. If a `DONE` sentinel
    exists, the session stops immediately (near-zero work / near-zero tokens).
@@ -56,7 +56,7 @@ code — and letting the LLM do only the judgement call — is deliberate.
    be *upgraded* to a real hit if a later run reclassifies it ≥ 0.7.
 6. **Self-termination.** On a confirmed, successfully-sent high-confidence hit,
    `DONE` is written and the success notification confirms it disarmed:
-   *"✅ R2 invite detected — morning check disabled. Run --reset to re-arm."*
+   *"✅ R2 invite detected — scheduled check disabled. Run --reset to re-arm."*
 7. **Hard backstop.** If the date passes **2026-07-15** with no hit, one final
    LOW "window elapsed — disabling check" notice is sent and `DONE` is written —
    so a silently-missed invite can never leave the job running for months.
@@ -201,7 +201,7 @@ the monitor. Nothing is written to disk.
 ## Re-arming and resetting
 
 ```bash
-python3 r2_monitor.py --reset     # clear the DONE sentinel; the morning check runs again
+python3 r2_monitor.py --reset     # clear the DONE sentinel; the scheduled check runs again
 ```
 
 Use this if a "maybe" turned out to be wrong, after a real hit if you want to
