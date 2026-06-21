@@ -238,6 +238,10 @@ address, and no real ntfy topic — the topic is supplied at runtime via
 `state/state.json` (it holds notified message IDs), and never hard-code your ntfy
 topic.
 
+## Author
+
+Built by Brian Leach in Austin, TX — [LinkedIn](https://www.linkedin.com/in/bleach/)
+
 ## License
 
 [MIT](LICENSE) © Brian Leach
