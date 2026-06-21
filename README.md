@@ -144,17 +144,28 @@ The Slack MCP connector must be enabled on the session/routine. Leave
 
 ### 2. Schedule it (3×/day: 07:00, 13:00, 19:00 America/Chicago)
 
-This runs as a **scheduled task / routine in Claude Code on the web** (it needs
-the Gmail MCP server, which lives in the Claude session):
+This runs as a **cloud routine** in Claude Code (it needs the Gmail MCP server,
+which lives in the Claude session). The easiest way to create it is the
+**`/schedule`** skill — just describe the routine and it provisions the cloud
+cron for you. In a Claude Code session, run `/schedule` and ask for:
 
-1. Open the repo in Claude Code on the web and create a **routine / scheduled
-   task**.
-2. Schedule it to run **three times a day — 07:00, 13:00, and 19:00, timezone
-   America/Chicago** (create three run times, or one routine per time).
-3. Prompt: paste the contents of [`RUN.md`](./RUN.md) (the block between the
-   `---` lines).
-4. Make sure `NTFY_TOPIC` (and `SLACK_USER_ID`, if using Slack) is set in the
-   environment, and the Gmail + Slack MCP connectors are enabled.
+- **Name:** `rivian-r2-monitor`
+- **Cadence:** three times a day at **07:00, 13:00, 19:00 America/Chicago**
+  (one routine, cron `0 0,12,18 * * *` in UTC during CDT — `/schedule` does the
+  timezone conversion for you).
+- **Prompt:** the contents of [`RUN.md`](./RUN.md) (the block between the `---`
+  lines). **Important:** the cloud agent gets a fresh git clone where `.env` is
+  absent (it's git-ignored), so prepend a step that writes `.env` with your
+  `NTFY_TOPIC` and `SLACK_USER_ID` before the pipeline runs — or set them another
+  way the script can read. (Don't use the environment's *Environment variables*
+  box for these — it's visible to anyone using the environment.)
+- **Connectors:** attach the **Gmail** and **Slack** MCP connectors.
+- **Model:** any; a stronger model classifies marketing-vs-invite more reliably.
+
+Prefer the web UI? You can instead create the routine manually at
+[claude.ai/code](https://claude.ai/code) → **Routines** → **New routine**, with
+the same cadence, prompt, and connectors. Either way, complete the egress
+allowlist in **§1b** first, or the cloud sends will 403.
 
 Why 3×/day: an order invite isn't minute-critical, so this caps worst-case
 detection latency at ~6–8h without continuous polling. Extra runs are safe and
