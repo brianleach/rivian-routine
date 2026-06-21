@@ -87,23 +87,39 @@ Other optional overrides (env vars or `.env`): `NTFY_SERVER` (default
 Claude Code on the web runs in a sandbox with a **network egress allowlist**. If
 `ntfy.sh` (or your `NTFY_SERVER`) is not on it, notifications fail with
 `HTTP 403: Host not in allowlist` and the monitor cannot alert you. The allowlist
-is set **per environment in the web UI** (not in this repo), so add your ntfy host
-before going live:
+is set **per cloud environment in the web UI** (not in this repo, not in the
+routine config), so add your ntfy host before going live.
 
-1. Open the environment used by the scheduled task for editing — click the
-   **cloud icon** where you start a session / configure the routine, then open the
-   environment settings dialog.
-2. Under **Network access**, select **Custom**.
-3. In the **Allowed domains** field, add one per line:
+Exact click-path (Claude Code on the web, as of this writing):
+
+1. Go to [claude.ai/code](https://claude.ai/code).
+2. At the bottom of the screen, next to the "Describe a task…" box, click the
+   **☁️ environment chip** (e.g. **Default** — whichever environment your routine
+   uses).
+3. In the popover, under **Cloud**, click the **⚙️ gear icon** on your
+   environment's row. The **"Update cloud environment"** dialog opens.
+4. Find the **Network access** dropdown (it defaults to **Trusted**) and change it
+   to **Custom**. An **Allowed domains** field appears.
+5. In **Allowed domains**, add one host per line — domains, *not* URLs:
    ```
    ntfy.sh
    ```
-   (or your own `NTFY_SERVER` host).
-4. Check **"Also include default list of common package managers"** so GitHub /
-   pip / npm keep working alongside ntfy.
-5. Save, then start a fresh session (the change applies to newly provisioned
-   sessions). Verify with `curl -d "test" https://ntfy.sh/<your-topic>` or a real
-   `python3 r2_monitor.py process --input fixtures/sample_results.json` run.
+   (or your own `NTFY_SERVER` host; `*` wildcards are supported).
+6. Leave **"Also include default list of common package managers"** *checked* —
+   the routine needs GitHub to clone this repo, plus pip/npm.
+7. **Save.** The change applies only to **newly provisioned sessions**, so it
+   takes effect on the routine's *next* scheduled run (an already-running session
+   won't be retrofitted).
+
+> ⚠️ Do **not** put `NTFY_TOPIC` / `SLACK_USER_ID` in the dialog's **Environment
+> variables** box — it warns that those values are visible to anyone using the
+> environment. The routine writes its own git-ignored `.env` at run time instead.
+
+Verify it took: trigger a manual run of the routine (or run
+`python3 r2_monitor.py process --input fixtures/sample_results.json` in a fresh
+cloud session) and confirm a push lands on your phone instead of a 403. A quick
+local sanity check of the topic+app wiring (separate from the sandbox allowlist)
+is `curl -d "test" https://ntfy.sh/<your-topic>`.
 
 You only need to add `ntfy.sh` — MCP connector traffic (Gmail, Slack) is routed
 through Anthropic's servers and works without being in the allowlist. See the
