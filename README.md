@@ -268,6 +268,20 @@ ambiguous "reservation: next steps" is a **MAYBE** (low), and a personalized
 "it's your turn to configure your R2 order" is a **HIGH** hit that *would* disarm
 the monitor. Nothing is written to disk.
 
+**Regression suite (stdlib only, no deps):**
+
+```bash
+python3 tests/test_fixtures.py
+```
+
+This runs every fixture through `process --dry-run` and asserts the exit code and
+HIT/MAYBE routing, then verifies the dry-run wrote no `state/`. It includes
+`fixtures/real_inbox_results.json` — modelled on a **real inbox that actually held
+the R2 invite**, alongside the two false-positive traps a keyword/sender filter
+would miss: a transactional **order confirmation** (invite-looking but a receipt)
+and a **"Keep an eye out for your invite"** pre-invite teaser. Only the genuine,
+personalized invite fires a HIGH hit and disarms; everything else stays silent.
+
 ## Re-arming and resetting
 
 ```bash
@@ -283,7 +297,8 @@ keep watching, or to reuse the monitor next time.
 r2_monitor.py                 # deterministic CLI: guard / process / reset / dry-run
 RUN.md                        # scheduled-session prompt (Gmail search + classify + Slack mirror)
 CLAUDE.md                     # guidance for Claude working in this repo
-fixtures/sample_results.json  # offline test fixtures
+fixtures/                     # offline test fixtures (sample + real-inbox regression cases)
+tests/test_fixtures.py        # stdlib regression suite: tier routing + exit codes per fixture
 .env.example                  # copy to .env (git-ignored): NTFY_TOPIC, SLACK_USER_ID
 state/                        # runtime state: state.json, DONE, last_run.json (git-ignored)
 ```

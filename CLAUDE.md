@@ -74,7 +74,14 @@ A MAYBE can be **upgraded** to a HIGH on a later run if reclassified ≥ 0.7.
 
 ## Testing
 
-- Offline plumbing: `python3 r2_monitor.py process --input fixtures/sample_results.json --dry-run`
+- Regression suite (stdlib only, no deps): `python3 tests/test_fixtures.py`.
+  Drives `process --dry-run` over every fixture in `fixtures/` and asserts the
+  exit code + HIT/MAYBE routing, then checks `--dry-run` created no `state/`.
+  Fixtures include `real_inbox_results.json` — a real inbox that held the actual
+  R2 invite alongside the two false-positive traps (a transactional order
+  *confirmation* and a "keep an eye out for your invite" pre-invite teaser);
+  only the genuine invite may fire + disarm.
+- Offline plumbing (single fixture): `python3 r2_monitor.py process --input fixtures/sample_results.json --dry-run`
 - End-to-end: paste `RUN.md` into a session with `DRY-RUN` at the top (searches
   the last 7 days, classifies, runs `process --dry-run`).
 - Exit codes from `process`: `0` normal, `10` already disarmed, `20` hit + disarmed.

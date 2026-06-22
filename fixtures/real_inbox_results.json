@@ -1,0 +1,62 @@
+[
+  {
+    "classification": "ACTIONABLE_INVITE",
+    "confidence": 0.97,
+    "reason": "Personalized: it's my turn — invited to configure and place my R2 order now.",
+    "sender": "Rivian <noreply@order.rivian.com>",
+    "subject": "It's time Brian! You're invited to order your R2",
+    "received": "2026-06-18T08:12:00-05:00",
+    "message_id": "REALINBOX_invite",
+    "thread_id": "REALINBOX_thread_invite"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "Transactional order confirmation / receipt for an order already placed — not an invite to order.",
+    "sender": "Rivian <orders@rivian.com>",
+    "subject": "Your R2 order confirmation",
+    "received": "2026-06-18T09:40:00-05:00",
+    "message_id": "REALINBOX_confirmation",
+    "thread_id": "REALINBOX_thread_confirmation"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.88,
+    "reason": "Reservation-conversion teaser hyping the upcoming order window; no personal invite to configure my order.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Turn your R2 reservation into reality",
+    "received": "2026-06-16T13:05:00-05:00",
+    "message_id": "REALINBOX_teaser_1",
+    "thread_id": "REALINBOX_thread_teaser_1"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.88,
+    "reason": "Duplicate reservation-conversion teaser; marketing blast, not a personal invite.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Turn your R2 reservation into reality",
+    "received": "2026-06-17T13:05:00-05:00",
+    "message_id": "REALINBOX_teaser_2",
+    "thread_id": "REALINBOX_thread_teaser_2"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.85,
+    "reason": "Pre-invite teaser: literally says 'keep an eye out for your invite' but does NOT invite me to order yet — anticipatory marketing, not actionable.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Keep an eye out for your invite",
+    "received": "2026-06-15T11:30:00-05:00",
+    "message_id": "REALINBOX_preinvite_teaser",
+    "thread_id": "REALINBOX_thread_preinvite"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.95,
+    "reason": "Third-party Rivian Forums newsletter digest mentioning R2; not from Rivian, not an invite.",
+    "sender": "Rivian Forums <digest@rivianforums.com>",
+    "subject": "Rivian Forums: this week's R2 discussion digest",
+    "received": "2026-06-17T06:00:00-05:00",
+    "message_id": "REALINBOX_forums_digest",
+    "thread_id": "REALINBOX_thread_forums"
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "Transactional order confirmation / receipt — not an invite to order.",
+    "sender": "Rivian <orders@rivian.com>",
+    "subject": "Your R2 order confirmation",
+    "received": "2026-06-18T09:40:00-05:00",
+    "message_id": "ALLMKTG_confirmation",
+    "thread_id": "ALLMKTG_thread_1"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.85,
+    "reason": "Pre-invite teaser ('keep an eye out for your invite') — anticipatory marketing, does not invite me to order yet.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Keep an eye out for your invite",
+    "received": "2026-06-15T11:30:00-05:00",
+    "message_id": "ALLMKTG_preinvite",
+    "thread_id": "ALLMKTG_thread_2"
+  }
+]

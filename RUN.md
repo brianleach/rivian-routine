@@ -61,7 +61,17 @@ above).
 - `MARKETING/NOISE` = generic newsletters, "R2 arrives June 9" hype, demo-drive
   promos, reviews, "design your R2" teasers, and third-party articles mentioning
   Rivian. The June 9 "Important update on R2 orders" marketing blast is NOT an
-  invite.
+  invite. Two false-positive traps to classify as NOISE (a keyword/sender filter
+  fails both, the classifier must not):
+  - **Transactional confirmations / receipts.** "Your R2 order confirmation" and
+    similar post-order emails are personalized and Rivian-sent but confirm an
+    order already placed — they do NOT invite me to order, so they are NOT
+    actionable. (If the invite and a confirmation both arrive, only the invite
+    fires; the confirmation stays silent.)
+  - **Pre-invite / "anticipatory" teasers.** "Keep an eye out for your invite"
+    or "Turn your R2 reservation into reality" contain invite-ish wording but do
+    NOT actually open my order window — they tell me an invite is *coming*. Not
+    actionable until the email itself invites me to configure/place my order now.
 - Calibrate confidence so it crosses 0.7 only for a genuine, personalized,
   actionable invite. If an email is clearly Rivian-sent and order-related but you
   genuinely cannot tell whether it's an invite, classify it `ACTIONABLE_INVITE`
