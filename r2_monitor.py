@@ -5,7 +5,7 @@ r2_monitor.py — Rivian R2 order-invite monitor (deterministic plumbing).
 This script owns everything that does NOT require judgement:
   * the DONE-sentinel gate (self-termination),
   * de-duplication state (so you are not pinged twice for the same email),
-  * ntfy notifications (high-confidence hit / maybe / backstop),
+  * ntfy notifications (high-confidence hit / maybe / news heads-up / backstop),
   * the hard July-15 backstop,
   * --reset (re-arm) and --dry-run (test) modes.
 
@@ -139,6 +139,9 @@ def load_state() -> dict:
     # later be upgraded to a real hit if reclassified with higher confidence.
     data.setdefault("high_confidence", {})
     data.setdefault("maybe", {})
+    # NEWS = substantive, non-actionable timeline/eligibility updates. Its own
+    # de-dup axis so a heads-up never collides with the invite/maybe tracking.
+    data.setdefault("news", {})
     return data
 
 
@@ -173,10 +176,14 @@ def _detail(c: dict) -> dict:
     }
 
 
-def write_last_run(high: list, maybe: list, notice: str | None = None) -> None:
+def write_last_run(high: list, maybe: list, news: list | None = None,
+                   notice: str | None = None) -> None:
     """Record THIS run's new alerts so the scheduled session can mirror them to
     Slack via the Slack MCP (the script can't reach the MCP itself). Overwritten
     every real run, so a stale file never causes a duplicate Slack ping.
+
+    `news` is the list of NEW timeline/eligibility heads-ups (NEWS tier); `notice`
+    is the single backstop "window elapsed" string. Both ride along to Slack.
     """
     os.makedirs(STATE_DIR, exist_ok=True)
     payload = {
@@ -184,6 +191,7 @@ def write_last_run(high: list, maybe: list, notice: str | None = None) -> None:
         "slack_user_id": SLACK_USER_ID or None,
         "high": high,
         "maybe": maybe,
+        "news": news or [],
         "notice": notice,
     }
     tmp = LAST_RUN_FILE + ".tmp"
@@ -281,6 +289,23 @@ def notify_maybe(c: dict, dry_run: bool) -> bool:
     )
 
 
+def notify_news(c: dict, dry_run: bool) -> bool:
+    body = (
+        "R2 news — NOT an order invite, but a substantive update on when/whether "
+        "you'll be able to order (e.g. a timeline or eligibility change).\n\n"
+        + _details_block(c)
+        + "\n\n(FYI only — not disarming; still watching for the actual invite.)"
+    )
+    return send_ntfy(
+        title="R2 timeline update - FYI",
+        body=body,
+        priority="default",
+        tags="calendar,car",
+        click=gmail_link(c["message_id"]),
+        dry_run=dry_run,
+    )
+
+
 def notify_backstop(dry_run: bool) -> bool:
     body = (
         "window elapsed — R2 invite never detected, disabling check.\n\n"
@@ -302,13 +327,18 @@ def notify_backstop(dry_run: bool) -> bool:
 # ----------------------------------------------------------------------------
 
 def tier_of(c: dict) -> str:
-    """Map a classification record to HIGH / MAYBE / NONE.
+    """Map a classification record to HIGH / MAYBE / NEWS / NONE.
 
     HIGH : ACTIONABLE_INVITE and confidence >= 0.7
     MAYBE: ACTIONABLE_INVITE and 0.4 <= confidence < 0.7
            (the classifier is instructed to place genuinely ambiguous, clearly
             Rivian-sent / order-related emails in this band so they surface as
             a MAYBE rather than being dropped)
+    NEWS : TIMELINE_UPDATE — a substantive, NON-actionable update on when/whether
+           I'll be able to order (a timeline, an order-window date, an
+           acceleration/eligibility change). Worth a heads-up but never disarms;
+           it is not the invite. Distinct from generic marketing/hype, which the
+           classifier still labels MARKETING/NOISE and stays silent.
     NONE : everything else (silent)
     """
     classification = str(c.get("classification", "")).strip().upper()
@@ -321,6 +351,9 @@ def tier_of(c: dict) -> str:
             return "HIGH"
         if conf >= MAYBE_LOW_THRESHOLD:
             return "MAYBE"
+        return "NONE"
+    if classification == "TIMELINE_UPDATE":
+        return "NEWS"
     return "NONE"
 
 
@@ -360,13 +393,13 @@ def _read_input(path: str | None) -> list:
     return data
 
 
-def _print_slack_hint(high: list, maybe: list, notice: str | None,
+def _print_slack_hint(high: list, maybe: list, news: list, notice: str | None,
                       dry_run: bool = False) -> None:
     """Tell the operator (and the scheduled session) whether a Slack mirror is
     pending. The session reads state/last_run.json and sends via the Slack MCP."""
-    if not (high or maybe or notice):
+    if not (high or maybe or news or notice):
         return
-    n = len(high) + len(maybe) + (1 if notice else 0)
+    n = len(high) + len(maybe) + len(news) + (1 if notice else 0)
     where = "would record" if dry_run else "recorded"
     target = SLACK_USER_ID or "(SLACK_USER_ID unset — Slack mirror disabled)"
     print(f"  [slack] {where} {n} alert(s) in state/last_run.json for Slack "
@@ -389,11 +422,11 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
             if not dry_run:
                 write_done("backstop: window elapsed")
                 write_last_run([], [], notice=notice)
-                _print_slack_hint([], [], notice)
+                _print_slack_hint([], [], [], notice)
                 print("Backstop notice sent; monitor disarmed.")
             else:
                 print("  [dry-run] would write DONE sentinel (backstop).")
-                _print_slack_hint([], [], notice, dry_run=True)
+                _print_slack_hint([], [], [], notice, dry_run=True)
         return 0
 
     candidates = _read_input(input_path)
@@ -407,6 +440,7 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
     did_high = False
     new_high: list = []   # new HIGH alerts this run (for the Slack mirror)
     new_maybe: list = []  # new MAYBE alerts this run
+    new_news: list = []   # new NEWS (timeline/eligibility) heads-ups this run
 
     for c in candidates:
         mid = c.get("message_id")
@@ -458,15 +492,31 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
                         "confidence": c.get("confidence"),
                         "notified_at": datetime.now().astimezone().isoformat(),
                     }
+
+        elif tier == "NEWS":
+            if mid in state["news"]:
+                print(f"  [dup ] {label} — already sent as a heads-up, skipping.")
+                continue
+            print(f"  [NEWS] {label}")
+            new_news.append(_detail(c))
+            if notify_news(c, dry_run):
+                if not dry_run:
+                    state["news"][mid] = {
+                        "subject": c.get("subject"),
+                        "sender": c.get("sender"),
+                        "received": c.get("received"),
+                        "confidence": c.get("confidence"),
+                        "notified_at": datetime.now().astimezone().isoformat(),
+                    }
         else:
             print(f"  [    ] {label} — not an invite (silent).")
 
     if not dry_run:
         save_state(state)
-        write_last_run(new_high, new_maybe)
-        _print_slack_hint(new_high, new_maybe, None)
+        write_last_run(new_high, new_maybe, news=new_news)
+        _print_slack_hint(new_high, new_maybe, new_news, None)
     else:
-        _print_slack_hint(new_high, new_maybe, None, dry_run=True)
+        _print_slack_hint(new_high, new_maybe, new_news, None, dry_run=True)
 
     # 3) Self-terminate on a confirmed, successfully-notified high-confidence hit.
     if did_high:

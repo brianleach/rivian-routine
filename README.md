@@ -24,7 +24,7 @@ The monitor is split into a thinking half and a plumbing half:
 
 | Part | Who runs it | What it does |
 |------|-------------|--------------|
-| `RUN.md` | the scheduled **Claude session** | pulls candidates from Gmail (MCP), classifies each as `ACTIONABLE_INVITE` vs `MARKETING/NOISE`, writes `results.json` |
+| `RUN.md` | the scheduled **Claude session** | pulls candidates from Gmail (MCP), classifies each as `ACTIONABLE_INVITE` / `TIMELINE_UPDATE` / `MARKETING/NOISE`, writes `results.json` |
 | `r2_monitor.py` | plain Python (no deps) | de-dup, ntfy notifications, the DONE sentinel, the backstop, `--reset`, `--dry-run` |
 
 Keeping the irreversible/stateful work (notifying, disarming) in plain, tested
@@ -49,6 +49,12 @@ code — and letting the LLM do only the judgement call — is deliberate.
    - **Maybe** (`ACTIONABLE_INVITE` and 0.4–0.7) → **LOW** priority ntfy flagged
      "POSSIBLE R2 invite — check manually." Keeps you in the loop without false
      alarms. Does **not** disarm — monitoring continues.
+   - **News** (`TIMELINE_UPDATE`) → **DEFAULT** priority ntfy flagged "R2 timeline
+     update — FYI." For substantive non-actionable updates on *when/whether* you
+     can order — a concrete order window/date (e.g. "you'll be invited in
+     September–October 2026"), an acceleration, or an eligibility change. A
+     heads-up, not the invite, so it does **not** disarm. Generic hype with no
+     timeline content stays silent.
    - **No hit** → silent.
    - **Two channels.** Alerts go to **ntfy and Slack**. The script owns ntfy and
      records each run's new alerts to `state/last_run.json`; the scheduled
@@ -275,12 +281,14 @@ python3 tests/test_fixtures.py
 ```
 
 This runs every fixture through `process --dry-run` and asserts the exit code and
-HIT/MAYBE routing, then verifies the dry-run wrote no `state/`. It includes
+HIT/MAYBE/NEWS routing, then verifies the dry-run wrote no `state/`. It includes
 `fixtures/real_inbox_results.json` — modelled on a **real inbox that actually held
 the R2 invite**, alongside the two false-positive traps a keyword/sender filter
 would miss: a transactional **order confirmation** (invite-looking but a receipt)
-and a **"Keep an eye out for your invite"** pre-invite teaser. Only the genuine,
-personalized invite fires a HIGH hit and disarms; everything else stays silent.
+and a **"Keep an eye out for your invite"** pre-invite teaser — plus a concrete
+**"you'll be invited in September–October 2026"** timeline email. Only the genuine,
+personalized invite fires a HIGH hit and disarms; the timeline email fires a
+**NEWS** heads-up (no disarm); the traps and hype stay silent.
 
 ## Re-arming and resetting
 

@@ -15,7 +15,8 @@ full description and `RUN.md` for the scheduled-session prompt.
   the judgement-heavy work: a two-pass Gmail search via the Gmail **MCP** server
   (`from:rivian.com newer_than:2d` + `"R2" newer_than:2d`, full bodies via
   `FULL_CONTENT`, de-duped by message ID) and **LLM classification** of each
-  candidate as `ACTIONABLE_INVITE` vs `MARKETING/NOISE`. It writes `results.json`.
+  candidate as `ACTIONABLE_INVITE` vs `TIMELINE_UPDATE` vs `MARKETING/NOISE`. It
+  writes `results.json`.
 - **`r2_monitor.py`** is plain Python (stdlib only, no deps) that owns everything
   deterministic and irreversible: the `DONE` sentinel gate, de-dup state, ntfy
   notifications, the hard backstop, `--reset`, and `--dry-run`.
@@ -30,7 +31,7 @@ classification judgement.
   send success is what gates de-dup state and self-termination.
 - **Slack** is the second channel. The script can't reach the Slack MCP, so on
   each real run it writes the run's NEW alerts to `state/last_run.json`
-  (`high`, `maybe`, `notice`, `slack_user_id`), and the scheduled session
+  (`high`, `maybe`, `news`, `notice`, `slack_user_id`), and the scheduled session
   (`RUN.md`, Step 4) mirrors them via the Slack MCP. Slack rides along; it does
   not gate disarm. `last_run.json` only ever lists NEW alerts, so Slack inherits
   the same de-dup. Slack is recorded even when ntfy fails, so a blocked ntfy
@@ -59,9 +60,17 @@ classification judgement.
 
 - HIGH: `ACTIONABLE_INVITE` and confidence ≥ `R2_HIGH_CONF` (0.7) → HIGH ntfy + disarm.
 - MAYBE: `ACTIONABLE_INVITE` and `R2_MAYBE_LOW` (0.4) ≤ confidence < 0.7 → LOW ntfy, keep watching.
+- NEWS: `TIMELINE_UPDATE` → DEFAULT-priority FYI ntfy, **never disarms**. For
+  substantive non-actionable updates about *when/whether* I can order (a concrete
+  order window/date, invitations starting/accelerating/being delayed, an
+  eligibility change) — e.g. "you'll be invited to order in September–October
+  2026". Confidence-independent: the classifier's `TIMELINE_UPDATE` label is the
+  gate. Distinct from generic hype, which stays MARKETING/NOISE → silent.
 - NONE: everything else → silent.
 
-A MAYBE can be **upgraded** to a HIGH on a later run if reclassified ≥ 0.7.
+A MAYBE can be **upgraded** to a HIGH on a later run if reclassified ≥ 0.7. NEWS
+is its own de-dup axis (`state["news"]`); it neither disarms nor blocks a later
+HIGH/MAYBE for a different message.
 
 ## Conventions
 
@@ -76,11 +85,14 @@ A MAYBE can be **upgraded** to a HIGH on a later run if reclassified ≥ 0.7.
 
 - Regression suite (stdlib only, no deps): `python3 tests/test_fixtures.py`.
   Drives `process --dry-run` over every fixture in `fixtures/` and asserts the
-  exit code + HIT/MAYBE routing, then checks `--dry-run` created no `state/`.
+  exit code + HIT/MAYBE/NEWS routing, then checks `--dry-run` created no `state/`.
   Fixtures include `real_inbox_results.json` — a real inbox that held the actual
   R2 invite alongside the two false-positive traps (a transactional order
-  *confirmation* and a "keep an eye out for your invite" pre-invite teaser);
-  only the genuine invite may fire + disarm.
+  *confirmation* and a "keep an eye out for your invite" pre-invite teaser) and a
+  concrete "you'll be invited in September–October 2026" timeline email; only the
+  genuine invite may fire + disarm, while the timeline email fires a NEWS heads-up
+  (no disarm). `timeline_update_results.json` isolates the NEWS tier: two genuine
+  timeline/eligibility updates fire heads-ups, contentless hype stays silent.
 - Offline plumbing (single fixture): `python3 r2_monitor.py process --input fixtures/sample_results.json --dry-run`
 - End-to-end: paste `RUN.md` into a session with `DRY-RUN` at the top (searches
   the last 7 days, classifies, runs `process --dry-run`).
