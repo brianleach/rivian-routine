@@ -58,5 +58,15 @@
     "received": "2026-06-17T06:00:00-05:00",
     "message_id": "REALINBOX_forums_digest",
     "thread_id": "REALINBOX_thread_forums"
+  },
+  {
+    "classification": "TIMELINE_UPDATE",
+    "confidence": 0.8,
+    "reason": "Not an invite, but gives a concrete personal order window: I'll be invited to order in September–October 2026.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Your R2 order window: you'll be invited in September–October 2026",
+    "received": "2026-06-17T15:20:00-05:00",
+    "message_id": "REALINBOX_timeline_update",
+    "thread_id": "REALINBOX_thread_timeline"
   }
 ]

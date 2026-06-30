@@ -1,0 +1,32 @@
+[
+  {
+    "classification": "TIMELINE_UPDATE",
+    "confidence": 0.82,
+    "reason": "Concrete order-window date: I'll be invited to order in September–October 2026. Not actionable yet, but a substantive heads-up.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Your R2 order window: you'll be invited in September–October 2026",
+    "received": "2026-06-20T10:00:00-05:00",
+    "message_id": "TIMELINE_window",
+    "thread_id": "TIMELINE_thread_window"
+  },
+  {
+    "classification": "TIMELINE_UPDATE",
+    "confidence": 0.75,
+    "reason": "Announces R2 order invitations are starting ahead of schedule — an acceleration of my path to ordering.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "R2 invitations are starting sooner than planned",
+    "received": "2026-06-20T11:30:00-05:00",
+    "message_id": "TIMELINE_accel",
+    "thread_id": "TIMELINE_thread_accel"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "Generic hype with no timeline or personal eligibility content — stays silent, not a TIMELINE_UPDATE.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "The R2 is coming — stay tuned!",
+    "received": "2026-06-20T12:00:00-05:00",
+    "message_id": "TIMELINE_hype",
+    "thread_id": "TIMELINE_thread_hype"
+  }
+]
