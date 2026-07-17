@@ -66,7 +66,7 @@ code — and letting the LLM do only the judgement call — is deliberate.
 6. **Self-termination.** On a confirmed, successfully-sent high-confidence hit,
    `DONE` is written and the success notification confirms it disarmed:
    *"✅ R2 invite detected — scheduled check disabled. Run --reset to re-arm."*
-7. **Hard backstop.** If the date passes **2026-07-15** with no hit, one final
+7. **Hard backstop.** If the date passes **2026-12-31** with no hit, one final
    LOW "window elapsed — disabling check" notice is sent and `DONE` is written —
    so a silently-missed invite can never leave the job running for months.
 
@@ -123,7 +123,7 @@ echo 'NTFY_TOPIC=your-private-topic-name' > .env   # e.g. r2-watch-7f3a9c
 ```
 
 Other optional overrides (env vars or `.env`): `NTFY_SERVER` (default
-`https://ntfy.sh`), `R2_BACKSTOP_DATE` (default `2026-07-15`), `R2_TIMEZONE`
+`https://ntfy.sh`), `R2_BACKSTOP_DATE` (default `2026-12-31`), `R2_TIMEZONE`
 (default `America/Chicago`), `R2_HIGH_CONF` (0.7), `R2_MAYBE_LOW` (0.4).
 
 ### 1b. Allow outbound access to ntfy.sh

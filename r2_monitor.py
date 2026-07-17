@@ -89,7 +89,7 @@ MAYBE_LOW_THRESHOLD = float(os.environ.get("R2_MAYBE_LOW", "0.4"))
 
 # Hard backstop: once this date has PASSED with no high-confidence hit, send one
 # final low-priority "window elapsed" notice and disarm. Caps the worst case.
-BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2026-07-15"))
+BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2026-12-31"))
 
 # Timezone for the backstop date comparison.
 TIMEZONE = os.environ.get("R2_TIMEZONE", "America/Chicago")
