@@ -6,7 +6,7 @@ This script owns everything that does NOT require judgement:
   * the DONE-sentinel gate (self-termination),
   * de-duplication state (so you are not pinged twice for the same email),
   * ntfy notifications (high-confidence hit / maybe / news heads-up / backstop),
-  * the hard July-15 backstop,
+  * the hard one-year backstop,
   * --reset (re-arm) and --dry-run (test) modes.
 
 The two parts that DO require judgement — pulling candidate emails from Gmail and
@@ -89,7 +89,7 @@ MAYBE_LOW_THRESHOLD = float(os.environ.get("R2_MAYBE_LOW", "0.4"))
 
 # Hard backstop: once this date has PASSED with no high-confidence hit, send one
 # final low-priority "window elapsed" notice and disarm. Caps the worst case.
-BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2026-07-15"))
+BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2027-07-18"))
 
 # Timezone for the backstop date comparison.
 TIMEZONE = os.environ.get("R2_TIMEZONE", "America/Chicago")
