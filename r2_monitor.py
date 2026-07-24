@@ -97,7 +97,8 @@ TIMEZONE = os.environ.get("R2_TIMEZONE", "America/Chicago")
 # Slack is a SECOND notification channel, sent alongside ntfy. The script can't
 # reach the Slack MCP itself, so it records what to send in state/last_run.json
 # and the scheduled session (RUN.md) mirrors it to this Slack user/channel via
-# the Slack MCP. Set SLACK_USER_ID (a user id "U..." for a DM, or a channel id)
+# the Slack MCP. Set SLACK_USER_ID (a channel id "C..." recommended, or a
+# user id "U..." for a DM)
 # in .env to enable; leave empty to use ntfy only.
 SLACK_USER_ID = os.environ.get("SLACK_USER_ID", "").strip()
 
