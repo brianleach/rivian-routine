@@ -179,7 +179,7 @@ session through the Slack MCP, so it needs no egress allowlist change — handy 
 backstop while you sort out ntfy. To enable, set your Slack target in `.env`:
 
 ```bash
-echo 'SLACK_USER_ID=U0XXXXXXX' >> .env   # your user id (DM) or a channel id (C...)
+echo 'SLACK_USER_ID=C0XXXXXXX' >> .env   # a channel id (C..., recommended) or your user id (U..., DMs you)
 ```
 
 The Slack MCP connector must be enabled on the session/routine. Leave

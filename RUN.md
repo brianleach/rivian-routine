@@ -120,7 +120,8 @@ for you to send. After Step 3:
   all empty and `notice` is null, send nothing.
 - If `slack_user_id` is null, Slack is disabled — skip (ntfy only).
 - Otherwise use the Slack MCP `slack_send_message` with `channel_id` =
-  `slack_user_id` (a `U...` id DMs that user). Send ONE message per alert:
+  `slack_user_id` (recommended: a `C...` channel id, which posts to that
+  channel; a `U...` user id DMs that user instead). Send ONE message per alert:
   - For each entry in `high`: a clear "🚗 R2 ORDER INVITE detected" message with
     the subject, sender, received time, the one-line reason, and the `gmail_url`.
   - For each entry in `maybe`: a "🔍 POSSIBLE R2 invite — check manually" message
