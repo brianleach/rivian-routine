@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """
-r2_monitor.py — Rivian R2 order-invite monitor (deterministic plumbing).
+r2_monitor.py — Rivian R2 VIN-assignment monitor (deterministic plumbing).
+
+Phase 2 of this repo: the order invite was caught and the order placed, so the
+monitor now watches for the next milestone — Rivian assigning the vehicle a VIN
+("When your R2 is assigned a VIN, you'll be able to complete the purchasing
+experience and schedule your delivery", per Rivian's own post-order emails).
 
 This script owns everything that does NOT require judgement:
   * the DONE-sentinel gate (self-termination),
   * de-duplication state (so you are not pinged twice for the same email),
   * ntfy notifications (high-confidence hit / maybe / news heads-up / backstop),
-  * the hard one-year backstop,
+  * the hard backstop,
   * --reset (re-arm) and --dry-run (test) modes.
 
 The two parts that DO require judgement — pulling candidate emails from Gmail and
-classifying them as ACTIONABLE_INVITE vs MARKETING/NOISE — are performed by the
+classifying them as VIN_ASSIGNED vs MARKETING/NOISE — are performed by the
 scheduled Claude session using the Gmail MCP server, and handed to this script as
 JSON (see RUN.md). That keeps the LLM doing only what an LLM is good at and keeps
 the irreversible/stateful bits in plain, testable code.
@@ -89,7 +94,11 @@ MAYBE_LOW_THRESHOLD = float(os.environ.get("R2_MAYBE_LOW", "0.4"))
 
 # Hard backstop: once this date has PASSED with no high-confidence hit, send one
 # final low-priority "window elapsed" notice and disarm. Caps the worst case.
-BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2027-07-18"))
+# Order placed 2026-08-18 with a quoted 4–6 week VIN window (through ~Sep 29);
+# the default leaves ~a month of slack for delays. Especially important in this
+# phase: the VIN may appear in the Rivian account (Garage) WITHOUT any email
+# ever being sent, so the backstop is the "go check manually" safety net.
+BACKSTOP_DATE = date.fromisoformat(os.environ.get("R2_BACKSTOP_DATE", "2026-10-31"))
 
 # Timezone for the backstop date comparison.
 TIMEZONE = os.environ.get("R2_TIMEZONE", "America/Chicago")
@@ -140,8 +149,8 @@ def load_state() -> dict:
     # later be upgraded to a real hit if reclassified with higher confidence.
     data.setdefault("high_confidence", {})
     data.setdefault("maybe", {})
-    # NEWS = substantive, non-actionable timeline/eligibility updates. Its own
-    # de-dup axis so a heads-up never collides with the invite/maybe tracking.
+    # NEWS = substantive, non-actionable production/delivery status updates. Its
+    # own de-dup axis so a heads-up never collides with the VIN/maybe tracking.
     data.setdefault("news", {})
     return data
 
@@ -259,13 +268,14 @@ def _details_block(c: dict) -> str:
 
 def notify_high(c: dict, dry_run: bool) -> bool:
     body = (
-        "Rivian appears to have sent your R2 order invite.\n\n"
+        "Rivian appears to have assigned your R2 a VIN — you should now be able "
+        "to complete the purchase and schedule delivery.\n\n"
         + _details_block(c)
-        + "\n\n✅ R2 invite detected — scheduled check disabled. "
+        + "\n\n✅ VIN assignment detected — scheduled check disabled. "
         "Run --reset to re-arm."
     )
     return send_ntfy(
-        title="R2 ORDER INVITE detected",
+        title="R2 VIN ASSIGNED",
         body=body,
         priority="high",
         tags="rotating_light,car",
@@ -276,12 +286,12 @@ def notify_high(c: dict, dry_run: bool) -> bool:
 
 def notify_maybe(c: dict, dry_run: bool) -> bool:
     body = (
-        "POSSIBLE R2 invite — check manually.\n\n"
+        "POSSIBLE R2 VIN / delivery email — check manually.\n\n"
         + _details_block(c)
         + f"\n\n(confidence {c.get('confidence', '?')}; not disarming — still watching.)"
     )
     return send_ntfy(
-        title="POSSIBLE R2 invite - check manually",
+        title="POSSIBLE R2 VIN email - check manually",
         body=body,
         priority="low",
         tags="mag,car",
@@ -292,13 +302,13 @@ def notify_maybe(c: dict, dry_run: bool) -> bool:
 
 def notify_news(c: dict, dry_run: bool) -> bool:
     body = (
-        "R2 news — NOT an order invite, but a substantive update on when/whether "
-        "you'll be able to order (e.g. a timeline or eligibility change).\n\n"
+        "R2 status news — NOT the VIN, but a substantive update on your "
+        "vehicle's production/delivery progress or timeline.\n\n"
         + _details_block(c)
-        + "\n\n(FYI only — not disarming; still watching for the actual invite.)"
+        + "\n\n(FYI only — not disarming; still watching for the VIN.)"
     )
     return send_ntfy(
-        title="R2 timeline update - FYI",
+        title="R2 status update - FYI",
         body=body,
         priority="default",
         tags="calendar,car",
@@ -309,13 +319,14 @@ def notify_news(c: dict, dry_run: bool) -> bool:
 
 def notify_backstop(dry_run: bool) -> bool:
     body = (
-        "window elapsed — R2 invite never detected, disabling check.\n\n"
+        "window elapsed — VIN assignment email never detected, disabling check.\n\n"
         f"The monitor watched through {BACKSTOP_DATE.isoformat()} and never saw a "
-        "high-confidence R2 order invite. It is disarming itself to stop running "
-        "indefinitely.\n\nRun --reset to re-arm if you still expect the invite."
+        "high-confidence VIN-assignment email. Rivian may assign the VIN in your "
+        "account without emailing — check your Garage at rivian.com/account.\n\n"
+        "Run --reset to re-arm if you want to keep watching."
     )
     return send_ntfy(
-        title="R2 monitor: window elapsed - disabling",
+        title="R2 VIN monitor: window elapsed - disabling",
         body=body,
         priority="low",
         tags="hourglass_done",
@@ -330,16 +341,17 @@ def notify_backstop(dry_run: bool) -> bool:
 def tier_of(c: dict) -> str:
     """Map a classification record to HIGH / MAYBE / NEWS / NONE.
 
-    HIGH : ACTIONABLE_INVITE and confidence >= 0.7
-    MAYBE: ACTIONABLE_INVITE and 0.4 <= confidence < 0.7
+    HIGH : VIN_ASSIGNED and confidence >= 0.7
+    MAYBE: VIN_ASSIGNED and 0.4 <= confidence < 0.7
            (the classifier is instructed to place genuinely ambiguous, clearly
             Rivian-sent / order-related emails in this band so they surface as
             a MAYBE rather than being dropped)
-    NEWS : TIMELINE_UPDATE — a substantive, NON-actionable update on when/whether
-           I'll be able to order (a timeline, an order-window date, an
-           acceleration/eligibility change). Worth a heads-up but never disarms;
-           it is not the invite. Distinct from generic marketing/hype, which the
-           classifier still labels MARKETING/NOISE and stays silent.
+    NEWS : STATUS_UPDATE — a substantive, NON-actionable change in the vehicle's
+           production/delivery status or timeline (entered production, built,
+           shipped, a delivery-window estimate or delay). Worth a heads-up but
+           never disarms; it is not the VIN. Distinct from generic
+           marketing/hype, which the classifier still labels MARKETING/NOISE
+           and stays silent.
     NONE : everything else (silent)
     """
     classification = str(c.get("classification", "")).strip().upper()
@@ -347,13 +359,13 @@ def tier_of(c: dict) -> str:
         conf = float(c.get("confidence", 0.0))
     except (TypeError, ValueError):
         conf = 0.0
-    if classification == "ACTIONABLE_INVITE":
+    if classification == "VIN_ASSIGNED":
         if conf >= HIGH_CONF_THRESHOLD:
             return "HIGH"
         if conf >= MAYBE_LOW_THRESHOLD:
             return "MAYBE"
         return "NONE"
-    if classification == "TIMELINE_UPDATE":
+    if classification == "STATUS_UPDATE":
         return "NEWS"
     return "NONE"
 
@@ -417,8 +429,10 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
     # 2) Hard backstop — fire once if the window has fully elapsed.
     if today_local() > BACKSTOP_DATE:
         print(f"Backstop: today is past {BACKSTOP_DATE.isoformat()} with no hit.")
-        notice = ("R2 monitor: window elapsed — R2 invite never detected, "
-                  "disabling check. Run --reset to re-arm.")
+        notice = ("R2 VIN monitor: window elapsed — VIN assignment email never "
+                  "detected, disabling check. The VIN may appear in your Rivian "
+                  "account (Garage) without an email — check rivian.com/account. "
+                  "Run --reset to re-arm.")
         if notify_backstop(dry_run):
             if not dry_run:
                 write_done("backstop: window elapsed")
@@ -510,7 +524,7 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
                         "notified_at": datetime.now().astimezone().isoformat(),
                     }
         else:
-            print(f"  [    ] {label} — not an invite (silent).")
+            print(f"  [    ] {label} — no alert (silent).")
 
     if not dry_run:
         save_state(state)
@@ -522,7 +536,7 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
     # 3) Self-terminate on a confirmed, successfully-notified high-confidence hit.
     if did_high:
         if not dry_run:
-            write_done("high-confidence R2 invite detected and notified")
+            write_done("high-confidence VIN assignment detected and notified")
             print("\n✅ High-confidence hit notified — monitor DISARMED "
                   "(DONE sentinel written). Run --reset to re-arm.")
         else:
@@ -534,7 +548,7 @@ def cmd_process(input_path: str | None, dry_run: bool) -> int:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Rivian R2 invite monitor.")
+    parser = argparse.ArgumentParser(description="Rivian R2 VIN-assignment monitor.")
     parser.add_argument("--reset", action="store_true",
                         help="Clear the DONE sentinel and re-arm the monitor.")
     sub = parser.add_subparsers(dest="command")

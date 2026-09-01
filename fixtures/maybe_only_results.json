@@ -1,11 +1,11 @@
 [
   {
-    "classification": "ACTIONABLE_INVITE",
+    "classification": "VIN_ASSIGNED",
     "confidence": 0.55,
-    "reason": "Clearly Rivian-sent and order-related, but genuinely ambiguous whether it's my personal invite or a teaser — surfaces as a MAYBE, not a hit.",
-    "sender": "Rivian <orders@rivian.com>",
-    "subject": "Your R2 reservation: next steps",
-    "received": "2026-06-19T09:15:00-05:00",
+    "reason": "Clearly Rivian-sent and about my order, but genuinely ambiguous whether the VIN has actually been assigned — surfaces as a MAYBE, not a hit.",
+    "sender": "Rivian <customerservice@t.rivian.com>",
+    "subject": "Your R2: next steps toward delivery",
+    "received": "2026-09-19T09:15:00-05:00",
     "message_id": "MAYBEONLY_nextsteps",
     "thread_id": "MAYBEONLY_thread_1"
   }

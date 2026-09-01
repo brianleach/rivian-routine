@@ -2,21 +2,21 @@
   {
     "classification": "MARKETING/NOISE",
     "confidence": 0.9,
-    "reason": "Transactional order confirmation / receipt — not an invite to order.",
-    "sender": "Rivian <orders@rivian.com>",
-    "subject": "Your R2 order confirmation",
-    "received": "2026-06-18T09:40:00-05:00",
-    "message_id": "ALLMKTG_confirmation",
+    "reason": "VIN-mention teaser: says 'When your R2 is assigned a VIN…' — describes the future milestone, does not assign it; process re-explainer with no new stage.",
+    "sender": "Rivian <hello@t.rivian.com>",
+    "subject": "Next steps for your R2 order",
+    "received": "2026-09-18T09:40:00-05:00",
+    "message_id": "ALLMKTG_vin_teaser",
     "thread_id": "ALLMKTG_thread_1"
   },
   {
     "classification": "MARKETING/NOISE",
-    "confidence": 0.85,
-    "reason": "Pre-invite teaser ('keep an eye out for your invite') — anticipatory marketing, does not invite me to order yet.",
+    "confidence": 0.88,
+    "reason": "Delivery-prep marketing (wall charger install) — get-ready-for-ownership promo, no VIN, no order action.",
     "sender": "Rivian <hello@em.rivian.com>",
-    "subject": "Keep an eye out for your invite",
-    "received": "2026-06-15T11:30:00-05:00",
-    "message_id": "ALLMKTG_preinvite",
+    "subject": "Ready to charge at home?",
+    "received": "2026-09-15T11:30:00-05:00",
+    "message_id": "ALLMKTG_charger",
     "thread_id": "ALLMKTG_thread_2"
   }
 ]

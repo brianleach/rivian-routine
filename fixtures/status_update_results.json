@@ -1,0 +1,32 @@
+[
+  {
+    "classification": "STATUS_UPDATE",
+    "confidence": 0.85,
+    "reason": "New production stage for my vehicle: my R2 has been built and is awaiting shipment.",
+    "sender": "Rivian <hello@t.rivian.com>",
+    "subject": "Your R2 has been built",
+    "received": "2026-09-20T10:00:00-05:00",
+    "message_id": "STATUS_built",
+    "thread_id": "STATUS_thread_built"
+  },
+  {
+    "classification": "STATUS_UPDATE",
+    "confidence": 0.8,
+    "reason": "Concrete delivery-window estimate for my vehicle: expected delivery in early October.",
+    "sender": "Rivian <customerservice@t.rivian.com>",
+    "subject": "An update on your R2 delivery timing",
+    "received": "2026-09-20T11:30:00-05:00",
+    "message_id": "STATUS_window",
+    "thread_id": "STATUS_thread_window"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "'We're still getting your vehicle ready' re-explainer with no new stage, window, or date — not a status change.",
+    "sender": "Rivian <hello@t.rivian.com>",
+    "subject": "What to expect while your R2 is being made",
+    "received": "2026-09-20T12:00:00-05:00",
+    "message_id": "STATUS_still_working",
+    "thread_id": "STATUS_thread_still_working"
+  }
+]

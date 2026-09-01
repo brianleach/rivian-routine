@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline regression tests for the R2 monitor's plumbing + tier routing.
+"""Offline regression tests for the R2 VIN monitor's plumbing + tier routing.
 
 These tests drive `r2_monitor.py process --input <fixture> --dry-run` against the
 fixtures in ../fixtures and assert the exit code and the HIT/MAYBE/NEWS/silent
@@ -9,12 +9,13 @@ routing the classifier's output should produce. They are deliberately:
   * side-effect-free — every case runs in --dry-run, and the suite asserts that
     no state/ directory was created (CLAUDE.md invariant 4).
 
-The fixtures pin the behaviour proven against a real inbox that actually held
-the R2 invite — including the two false-positive traps a keyword/sender filter
-would fail on: a transactional order *confirmation* (invite-looking but a
-receipt) and a "Keep an eye out for your invite" pre-invite teaser (contains the
-literal word "invite"). Both must stay silent; only the genuine personalized
-invite may fire a HIGH hit and disarm (exit 20).
+The fixtures are modelled on the real post-order inbox, including the
+false-positive traps a keyword/sender filter would fail on: Rivian's own
+"When your R2 is assigned a VIN, you'll be able to…" process emails (they
+literally contain the word VIN but describe a FUTURE milestone), transactional
+order/configuration confirmations, and delivery-prep marketing (home charger,
+road trips). All must stay silent; only a genuine VIN-assignment /
+complete-your-purchase email may fire a HIGH hit and disarm (exit 20).
 """
 
 from __future__ import annotations
@@ -30,22 +31,24 @@ STATE_DIR = os.path.join(REPO_ROOT, "state")
 
 # fixture filename -> expected (exit_code, high_count, maybe_count, news_count)
 CASES = {
-    # The real-inbox regression: exactly one genuine invite fires + disarms; the
-    # confirmation, the teasers, the "keep an eye out for your invite" pre-invite
-    # teaser, and the third-party forums digest all stay silent — and the
-    # concrete "you'll be invited in September–October 2026" timeline email
-    # surfaces as a NEWS heads-up (the previously-missed case) without disarming.
-    "real_inbox_results.json": (20, 1, 0, 1),
+    # The post-order-inbox regression: exactly one genuine VIN-assignment email
+    # fires + disarms; the VIN-mention teaser ("Next steps for your R2 order"),
+    # the updated-configuration receipt, the charger/road-trip promos, and the
+    # third-party forums digest (which even says "R2 VINs are dropping") all
+    # stay silent — and "Your R2 is in production" surfaces as a NEWS heads-up
+    # without disarming.
+    "vin_phase_inbox_results.json": (20, 1, 0, 1),
     # The shipped sample: one HIGH hit (disarms) plus one ambiguous MAYBE.
     "sample_results.json": (20, 1, 1, 0),
     # A single ambiguous, clearly-Rivian order email surfaces as a MAYBE only —
     # no hit, no disarm (exit 0).
     "maybe_only_results.json": (0, 0, 1, 0),
-    # Pure marketing/noise (incl. the two traps): completely silent (exit 0).
+    # Pure marketing/noise (incl. the VIN-mention-teaser trap): silent (exit 0).
     "all_marketing_results.json": (0, 0, 0, 0),
-    # Two genuine timeline/eligibility updates fire NEWS heads-ups (no disarm);
-    # the no-timeline hype stays silent. Exit 0 — NEWS never disarms.
-    "timeline_update_results.json": (0, 0, 0, 2),
+    # Two genuine production/delivery status updates fire NEWS heads-ups (no
+    # disarm); the "still getting ready" re-explainer stays silent. Exit 0 —
+    # NEWS never disarms.
+    "status_update_results.json": (0, 0, 0, 2),
 }
 
 
