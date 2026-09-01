@@ -1,19 +1,28 @@
-# Rivian R2 invite monitor
+# Rivian R2 VIN monitor
 
 A scheduled check — it runs a few times a day — that watches Gmail for the
-**real** Rivian R2 order invite, pushes a phone notification when it arrives, and
-then **disarms itself** so it stops consuming tokens once the job is done.
+Rivian R2 **VIN-assignment** email, pushes a phone notification when it arrives,
+and then **disarms itself** so it stops consuming tokens once the job is done.
+
+This is the repo's **second act**. Phase 1 watched for the R2 *order invite* —
+and caught it (order placed 2026-08-18). Rivian's own post-order emails describe
+the next milestone: *"When your R2 is assigned a VIN, you'll be able to complete
+the purchasing experience and schedule your delivery."* Same architecture, new
+target.
 
 It is built for two hard parts of this specific problem:
 
-1. **False positives.** Rivian sends frequent marketing blasts with invite-ish
-   subject lines ("Important update on R2 orders", "R2 arrives June 9"). A keyword
-   match cries wolf. So candidates are run through an **LLM classifier** that
-   judges *intent* — a personalized, actionable call to place/configure your order
-   vs. a newsletter.
-2. **Unknown sender.** Marketing comes from `hello@em.rivian.com`, but the
-   transactional invite may come from a different domain/ESP. So the sender is
-   **never used as a hard filter** — it's explicitly untrusted as a signal.
+1. **False positives.** Rivian's post-order lifecycle emails literally contain
+   the word "VIN" — *"When your R2 is assigned a VIN, you'll be able to…"* — while
+   assigning nothing, and the marketing stream shifts to delivery-adjacent promos
+   ("Ready to charge at home?", "R2 road trips made easy"). A keyword match cries
+   wolf. So candidates are run through an **LLM classifier** that judges
+   *intent* — "your identified vehicle exists, act now" vs. a teaser or promo.
+2. **Unknown sender.** Marketing comes from `hello@em.rivian.com`, transactional
+   mail from `t.rivian.com` so far — but the VIN/delivery email could come from a
+   different domain/ESP (logistics, Rivian Financial Services / Chase). So the
+   sender is **never used as a hard filter** — it's explicitly untrusted as a
+   signal.
 
 > **Just want it running?** Skip straight to [What you'll need](#what-youll-need)
 > and [Setup](#setup). This next section is the how-and-why for the curious.
@@ -24,7 +33,7 @@ The monitor is split into a thinking half and a plumbing half:
 
 | Part | Who runs it | What it does |
 |------|-------------|--------------|
-| `RUN.md` | the scheduled **Claude session** | pulls candidates from Gmail (MCP), classifies each as `ACTIONABLE_INVITE` / `TIMELINE_UPDATE` / `MARKETING/NOISE`, writes `results.json` |
+| `RUN.md` | the scheduled **Claude session** | pulls candidates from Gmail (MCP), classifies each as `VIN_ASSIGNED` / `STATUS_UPDATE` / `MARKETING/NOISE`, writes `results.json` |
 | `r2_monitor.py` | plain Python (no deps) | de-dup, ntfy notifications, the DONE sentinel, the backstop, `--reset`, `--dry-run` |
 
 Keeping the irreversible/stateful work (notifying, disarming) in plain, tested
@@ -37,24 +46,27 @@ code — and letting the LLM do only the judgement call — is deliberate.
 2. **Two-pass Gmail search** (full message bodies, `FULL_CONTENT`):
    - Primary: `from:rivian.com newer_than:2d` — Gmail's domain match catches any
      Rivian subdomain, so we don't depend on one address.
-   - Secondary: `"R2" newer_than:2d` — catches an invite from a non-obvious /
-     third-party vendor domain. Pulls in noise (e.g. TLDR/Wired); the classifier
-     handles it. Candidates are de-duped across both passes by message ID.
+   - Secondary: `("R2" OR "VIN") newer_than:2d` — catches a VIN/delivery email
+     from a non-obvious / third-party vendor domain. Pulls in noise (e.g.
+     TLDR/Wired); the classifier handles it. Candidates are de-duped across both
+     passes by message ID.
 3. **Classification.** Each candidate → strict JSON with `classification`,
    `confidence`, `reason`, `sender`, `subject`, `received` (+ `message_id`).
 4. **Decide & notify** (`r2_monitor.py process`):
-   - **High-confidence hit** (`ACTIONABLE_INVITE` and confidence ≥ 0.7) →
+   - **High-confidence hit** (`VIN_ASSIGNED` and confidence ≥ 0.7) →
      **HIGH** priority ntfy with subject/sender/time/reason and a direct Gmail
-     link, then the monitor **disarms** (writes `DONE`).
-   - **Maybe** (`ACTIONABLE_INVITE` and 0.4–0.7) → **LOW** priority ntfy flagged
-     "POSSIBLE R2 invite — check manually." Keeps you in the loop without false
-     alarms. Does **not** disarm — monitoring continues.
-   - **News** (`TIMELINE_UPDATE`) → **DEFAULT** priority ntfy flagged "R2 timeline
-     update — FYI." For substantive non-actionable updates on *when/whether* you
-     can order — a concrete order window/date (e.g. "you'll be invited in
-     September–October 2026"), an acceleration, or an eligibility change. A
-     heads-up, not the invite, so it does **not** disarm. Generic hype with no
-     timeline content stays silent.
+     link, then the monitor **disarms** (writes `DONE`). This is an email that
+     says your R2 has its VIN, shows the VIN, or invites you to complete the
+     purchase / schedule delivery.
+   - **Maybe** (`VIN_ASSIGNED` and 0.4–0.7) → **LOW** priority ntfy flagged
+     "POSSIBLE R2 VIN email — check manually." Keeps you in the loop without
+     false alarms. Does **not** disarm — monitoring continues.
+   - **News** (`STATUS_UPDATE`) → **DEFAULT** priority ntfy flagged "R2 status
+     update — FYI." For substantive changes in your vehicle's production/delivery
+     progress — a new production stage ("your R2 is in production" / "has been
+     built"), shipped, a concrete delivery-window estimate, or a delay. A
+     heads-up, not the VIN, so it does **not** disarm. "We're still getting your
+     vehicle ready" re-explainers stay silent.
    - **No hit** → silent.
    - **Two channels.** Alerts go to **ntfy and Slack**. The script owns ntfy and
      records each run's new alerts to `state/last_run.json`; the scheduled
@@ -65,10 +77,14 @@ code — and letting the LLM do only the judgement call — is deliberate.
    be *upgraded* to a real hit if a later run reclassifies it ≥ 0.7.
 6. **Self-termination.** On a confirmed, successfully-sent high-confidence hit,
    `DONE` is written and the success notification confirms it disarmed:
-   *"✅ R2 invite detected — scheduled check disabled. Run --reset to re-arm."*
-7. **Hard backstop.** If the date passes **2027-07-18** with no hit, one final
-   LOW "window elapsed — disabling check" notice is sent and `DONE` is written —
-   so a silently-missed invite can never leave the job running for months.
+   *"✅ VIN assignment detected — scheduled check disabled. Run --reset to re-arm."*
+7. **Hard backstop.** If the date passes **2026-10-31** (the quoted 4–6 week VIN
+   window ran through ~Sep 29; this adds a month of slack) with no hit, one final
+   LOW "window elapsed — disabling check" notice is sent and `DONE` is written.
+   This matters more in the VIN phase: Rivian may drop the VIN into your account
+   (Garage) **without ever sending an email**, so the backstop notice tells you
+   to go check [rivian.com/account](https://rivian.com/account) manually rather
+   than letting the job run silently for months.
 
 ## What you'll need
 
@@ -123,7 +139,7 @@ echo 'NTFY_TOPIC=your-private-topic-name' > .env   # e.g. r2-watch-7f3a9c
 ```
 
 Other optional overrides (env vars or `.env`): `NTFY_SERVER` (default
-`https://ntfy.sh`), `R2_BACKSTOP_DATE` (default `2027-07-18`), `R2_TIMEZONE`
+`https://ntfy.sh`), `R2_BACKSTOP_DATE` (default `2026-10-31`), `R2_TIMEZONE`
 (default `America/Chicago`), `R2_HIGH_CONF` (0.7), `R2_MAYBE_LOW` (0.4).
 
 ### 1b. Allow outbound access to ntfy.sh
@@ -195,8 +211,8 @@ session — this is the one hard requirement. Connect it once on your account:
    (or, in the Claude Code web app, **Customize → Connectors**).
 2. Find **Gmail** in the directory and click **Connect**.
 3. Complete Google's OAuth flow and grant read access to your mail. You'll be
-   asked to pick the Google account whose inbox you want watched — use the one the
-   R2 invite will land in.
+   asked to pick the Google account whose inbox you want watched — use the one
+   Rivian's order emails land in.
 4. Back in Claude Code, confirm **Gmail** shows as connected. When you create the
    routine in step 2, attach this connector to it (see **Connectors** below).
 
@@ -225,14 +241,14 @@ cron for you. In a Claude Code session, run `/schedule` and ask for:
   way the script can read. (Don't use the environment's *Environment variables*
   box for these — it's visible to anyone using the environment.)
 - **Connectors:** attach the **Gmail** and **Slack** MCP connectors.
-- **Model:** any; a stronger model classifies marketing-vs-invite more reliably.
+- **Model:** any; a stronger model classifies marketing-vs-VIN more reliably.
 
 Prefer the web UI? You can instead create the routine manually at
 [claude.ai/code](https://claude.ai/code) → **Routines** → **New routine**, with
 the same cadence, prompt, and connectors. Either way, complete the egress
 allowlist in **§1b** first, or the cloud sends will 403.
 
-Why 3×/day: an order invite isn't minute-critical, so this caps worst-case
+Why 3×/day: a VIN assignment isn't minute-critical, so this caps worst-case
 detection latency at ~6–8h without continuous polling. Extra runs are safe and
 cheap — de-dup means you're never pinged twice for the same email, and once a
 high-confidence hit fires, the `DONE` sentinel makes every later run exit at the
@@ -253,8 +269,8 @@ tighter latency; drop to 1×/day to minimize cost.
 
 `--dry-run` runs the **full pipeline against the last 7 days** but **suppresses
 real notifications** and **never writes the sentinel or state** — so you can
-confirm it tags the June 9 "Important update" blast and other existing marketing
-as **NOT** an invite.
+confirm it tags the charger/road-trip promos and Rivian's own "When your R2 is
+assigned a VIN, you'll be able to…" process emails as **NOT** the VIN.
 
 **End-to-end (real Gmail), in a Claude session:** paste `RUN.md` into a normal
 session and put the word **DRY-RUN** at the top. It will search the last 7 days,
@@ -269,9 +285,9 @@ decision logic deterministically:
 python3 r2_monitor.py process --input fixtures/sample_results.json --dry-run
 ```
 
-Expected: the June 9 marketing blast and the TLDR newsletter are **silent**, the
-ambiguous "reservation: next steps" is a **MAYBE** (low), and a personalized
-"it's your turn to configure your R2 order" is a **HIGH** hit that *would* disarm
+Expected: the charger promo and the TLDR newsletter are **silent**, the
+ambiguous "an update on your R2 order" is a **MAYBE** (low), and a personalized
+"it's time to complete your R2 purchase" is a **HIGH** hit that *would* disarm
 the monitor. Nothing is written to disk.
 
 **Regression suite (stdlib only, no deps):**
@@ -282,13 +298,15 @@ python3 tests/test_fixtures.py
 
 This runs every fixture through `process --dry-run` and asserts the exit code and
 HIT/MAYBE/NEWS routing, then verifies the dry-run wrote no `state/`. It includes
-`fixtures/real_inbox_results.json` — modelled on a **real inbox that actually held
-the R2 invite**, alongside the two false-positive traps a keyword/sender filter
-would miss: a transactional **order confirmation** (invite-looking but a receipt)
-and a **"Keep an eye out for your invite"** pre-invite teaser — plus a concrete
-**"you'll be invited in September–October 2026"** timeline email. Only the genuine,
-personalized invite fires a HIGH hit and disarms; the timeline email fires a
-**NEWS** heads-up (no disarm); the traps and hype stay silent.
+`fixtures/vin_phase_inbox_results.json` — modelled on the **real post-order
+inbox**, with the false-positive traps a keyword/sender filter would miss:
+Rivian's own **"Next steps for your R2 order"** email (it literally contains the
+word VIN, in *"When your R2 is assigned a VIN, you'll be able to…"*), an
+**updated-configuration confirmation** receipt, the **home charger** and **road
+trip** promos, and a third-party forums digest titled *"R2 VINs are dropping"*.
+Only a genuine, personalized VIN-assignment email fires a HIGH hit and disarms;
+**"Your R2 is in production"** fires a **NEWS** heads-up (no disarm); the traps
+stay silent.
 
 ## Re-arming and resetting
 
@@ -297,7 +315,10 @@ python3 r2_monitor.py --reset     # clear the DONE sentinel; the scheduled check
 ```
 
 Use this if a "maybe" turned out to be wrong, after a real hit if you want to
-keep watching, or to reuse the monitor next time.
+keep watching, or to reuse the monitor for the next milestone — that's exactly
+how this repo moved from invite-watching (phase 1) to VIN-watching (phase 2): a
+`reset`, a new classification target in `RUN.md`, and a new backstop date. If
+your deployed copy still has `state/` from the invite phase, run the reset once.
 
 ## Files
 
@@ -305,7 +326,7 @@ keep watching, or to reuse the monitor next time.
 r2_monitor.py                 # deterministic CLI: guard / process / reset / dry-run
 RUN.md                        # scheduled-session prompt (Gmail search + classify + Slack mirror)
 CLAUDE.md                     # guidance for Claude working in this repo
-fixtures/                     # offline test fixtures (sample + real-inbox regression cases)
+fixtures/                     # offline test fixtures (sample + post-order-inbox regression cases)
 tests/test_fixtures.py        # stdlib regression suite: tier routing + exit codes per fixture
 .env.example                  # copy to .env (git-ignored): NTFY_TOPIC, SLACK_USER_ID
 state/                        # runtime state: state.json, DONE, last_run.json (git-ignored)

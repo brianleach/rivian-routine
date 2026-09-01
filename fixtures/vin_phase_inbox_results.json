@@ -1,0 +1,72 @@
+[
+  {
+    "classification": "VIN_ASSIGNED",
+    "confidence": 0.95,
+    "reason": "Personalized: my R2 has been assigned a VIN — I can now complete the purchasing experience and schedule delivery.",
+    "sender": "Rivian <customerservice@t.rivian.com>",
+    "subject": "Your R2 has a VIN — complete your purchase",
+    "received": "2026-09-18T09:12:00-05:00",
+    "message_id": "VINPHASE_vin_assigned",
+    "thread_id": "VINPHASE_thread_vin"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "VIN-mention teaser: 'When your R2 is assigned a VIN, you'll be able to…' describes a FUTURE milestone; process re-explainer with no new stage or date.",
+    "sender": "Rivian <hello@t.rivian.com>",
+    "subject": "Next steps for your R2 order",
+    "received": "2026-09-16T11:03:00-05:00",
+    "message_id": "VINPHASE_vin_teaser",
+    "thread_id": "VINPHASE_thread_teaser"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "Transactional receipt for a configuration change on the order I already placed — identifies no built vehicle, unlocks nothing.",
+    "sender": "Rivian <customerservice@t.rivian.com>",
+    "subject": "Your updated R2 confirmation",
+    "received": "2026-09-15T17:10:00-05:00",
+    "message_id": "VINPHASE_updated_confirmation",
+    "thread_id": "VINPHASE_thread_confirmation"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.88,
+    "reason": "Delivery-prep marketing (home charger promo) — sounds delivery-adjacent but carries no VIN and no action on my order.",
+    "sender": "Rivian <hello@em.rivian.com>",
+    "subject": "Ready to charge at home?",
+    "received": "2026-09-15T14:50:00-05:00",
+    "message_id": "VINPHASE_charger_promo",
+    "thread_id": "VINPHASE_thread_charger"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.9,
+    "reason": "Ownership-lifestyle marketing (trip planning) — no order or vehicle status content.",
+    "sender": "Rivian <hello@t.rivian.com>",
+    "subject": "R2 road trips made easy",
+    "received": "2026-09-14T11:04:00-05:00",
+    "message_id": "VINPHASE_roadtrip_promo",
+    "thread_id": "VINPHASE_thread_roadtrip"
+  },
+  {
+    "classification": "MARKETING/NOISE",
+    "confidence": 0.95,
+    "reason": "Third-party forums digest mentioning R2 VINs being assigned to other people — not about MY vehicle.",
+    "sender": "Rivian Forums <digest@rivianforums.com>",
+    "subject": "Rivian Forums: R2 VINs are dropping — who got theirs?",
+    "received": "2026-09-14T06:00:00-05:00",
+    "message_id": "VINPHASE_forums_digest",
+    "thread_id": "VINPHASE_thread_forums"
+  },
+  {
+    "classification": "STATUS_UPDATE",
+    "confidence": 0.85,
+    "reason": "Not the VIN, but a new production stage for my vehicle: my R2 has entered production.",
+    "sender": "Rivian <hello@t.rivian.com>",
+    "subject": "Your R2 is in production",
+    "received": "2026-09-13T10:20:00-05:00",
+    "message_id": "VINPHASE_in_production",
+    "thread_id": "VINPHASE_thread_production"
+  }
+]
